@@ -8,6 +8,7 @@ import { prisma } from "./app/prisma.js"
 
 import authRoutes from "./app/auth/auth.routes.js"
 import userRoutes from "./app/user/user.routes.js"
+import adminRoutes from "./app/admin/admin.routes.js"
 
 import cors from "cors"
 
@@ -28,6 +29,7 @@ async function main() {
 
   app.use("/api/auth", authRoutes)
   app.use("/api/users", userRoutes)
+  app.use("/api/admin", adminRoutes)
 
   app.use(notFound)
   app.use(errorHandler)

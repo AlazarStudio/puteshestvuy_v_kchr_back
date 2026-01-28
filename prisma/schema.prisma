@@ -1,16 +1,12 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/client"
 }
 
 datasource db {
-  // provider = "postgresql"
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
@@ -20,14 +16,19 @@ enum Role {
   USER
 }
 
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
 type UserInformation {
   firstName String?
   lastName  String?
 }
 
 model User {
-  // id              Int              @id @default(autoincrement()) // postgresql
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId // mongodb
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   email           String           @unique
@@ -36,4 +37,168 @@ model User {
   password        String
   role            Role             @default(USER)
   userInformation UserInformation?
+  reviews         Review[]
+}
+
+// =============== МАРШРУТЫ ===============
+
+model Route {
+  id               String       @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+  title            String
+  slug             String       @unique
+  shortDescription String?      @map("short_description")
+  description      String?
+  season           String?      // Зима, Весна, Лето, Осень
+  distance         Float?       // км
+  duration         String?      // 3ч 30м
+  difficulty       Int?         @default(3) // 1-5
+  transport        String?      // Пешком, Верхом, Автомобиль, Квадроцикл
+  isFamily         Boolean      @default(false) @map("is_family")
+  hasOvernight     Boolean      @default(false) @map("has_overnight")
+  elevationGain    Float?       @map("elevation_gain") // перепад высот
+  whatToBring      String?      @map("what_to_bring")
+  importantInfo    String?      @map("important_info")
+  mapUrl           String?      @map("map_url")
+  isActive         Boolean      @default(true) @map("is_active")
+  images           String[]     // массив URL изображений
+  points           RoutePoint[]
+  reviews          Review[]
+  placeIds         String[]     @db.ObjectId @map("place_ids")
+
+  @@map("routes")
+}
+
+model RoutePoint {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  title       String
+  description String?
+  image       String?
+  order       Int      @default(0)
+  routeId     String   @db.ObjectId @map("route_id")
+  route       Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@map("route_points")
+}
+
+// =============== МЕСТА ===============
+
+model Place {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  title            String
+  slug             String   @unique
+  location         String?
+  shortDescription String?  @map("short_description")
+  description      String?
+  howToGet         String?  @map("how_to_get")
+  audioGuide       String?  @map("audio_guide")
+  video            String?
+  rating           Float?   @default(0)
+  reviewsCount     Int      @default(0) @map("reviews_count")
+  isActive         Boolean  @default(true) @map("is_active")
+  images           String[]
+  reviews          Review[]
+
+  @@map("places")
+}
+
+// =============== НОВОСТИ ===============
+
+model News {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  title            String
+  slug             String   @unique
+  category         String?  // Новости, Маршруты, Гайды, События, Анонсы
+  shortDescription String?  @map("short_description")
+  content          String?
+  author           String?
+  publishedAt      DateTime? @map("published_at")
+  isActive         Boolean  @default(false) @map("is_active")
+  images           String[]
+
+  @@map("news")
+}
+
+// =============== УСЛУГИ И СЕРВИСЫ ===============
+
+model Service {
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  title            String
+  slug             String         @unique
+  category         String?        // Гид, Прокат, Гостиница и т.д.
+  shortDescription String?        @map("short_description")
+  description      String?
+  phone            String?
+  email            String?
+  telegram         String?
+  address          String?
+  rating           Float?         @default(0)
+  reviewsCount     Int            @default(0) @map("reviews_count")
+  isVerified       Boolean        @default(false) @map("is_verified")
+  isActive         Boolean        @default(true) @map("is_active")
+  images           String[]
+  certificates     String[]
+  prices           ServicePrice[]
+  reviews          Review[]
+
+  @@map("services")
+}
+
+type ServicePrice {
+  name  String
+  price Float
+}
+
+// =============== ОТЗЫВЫ ===============
+
+model Review {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  authorName   String       @map("author_name")
+  authorAvatar String?      @map("author_avatar")
+  rating       Int          // 1-5
+  text         String
+  status       ReviewStatus @default(pending)
+  
+  // Связь с пользователем (опционально)
+  userId       String?      @db.ObjectId @map("user_id")
+  user         User?        @relation(fields: [userId], references: [id])
+  
+  // Полиморфная связь с сущностями
+  entityType   String       @map("entity_type") // route, place, service
+  entityId     String       @db.ObjectId @map("entity_id")
+  entityTitle  String?      @map("entity_title")
+  
+  // Связи (опциональные, для удобства)
+  routeId      String?      @db.ObjectId @map("route_id")
+  route        Route?       @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  placeId      String?      @db.ObjectId @map("place_id")
+  place        Place?       @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  serviceId    String?      @db.ObjectId @map("service_id")
+  service      Service?     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+// =============== МЕДИА ===============
+
+model Media {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime @default(now()) @map("created_at")
+  filename  String
+  url       String
+  mimetype  String
+  size      Int
+
+  @@map("media")
 }
