@@ -90,6 +90,43 @@ export const getPlaceById = asyncHandler(async (req, res) => {
   res.json(safePlace)
 })
 
+// Синхронизирует «места рядом» в обе стороны: у каждого из nearbyIds добавляем currentPlaceId в их nearbyPlaceIds
+async function syncNearbyPlaceIdsBidirectional(currentPlaceId, newNearbyIds, oldNearbyIds = []) {
+  const newSet = new Set(Array.isArray(newNearbyIds) ? newNearbyIds : [])
+  const oldSet = new Set(Array.isArray(oldNearbyIds) ? oldNearbyIds : [])
+
+  for (const otherId of newSet) {
+    if (otherId === currentPlaceId) continue
+    const other = await prisma.place.findUnique({
+      where: { id: otherId },
+      select: { nearbyPlaceIds: true },
+    })
+    if (!other) continue
+    const ids = Array.isArray(other.nearbyPlaceIds) ? other.nearbyPlaceIds : []
+    if (ids.includes(currentPlaceId)) continue
+    await prisma.place.update({
+      where: { id: otherId },
+      data: { nearbyPlaceIds: [...ids, currentPlaceId] },
+    })
+  }
+
+  for (const otherId of oldSet) {
+    if (newSet.has(otherId)) continue
+    const other = await prisma.place.findUnique({
+      where: { id: otherId },
+      select: { nearbyPlaceIds: true },
+    })
+    if (!other) continue
+    const ids = Array.isArray(other.nearbyPlaceIds) ? other.nearbyPlaceIds : []
+    const filtered = ids.filter((id) => id !== currentPlaceId)
+    if (filtered.length === ids.length) continue
+    await prisma.place.update({
+      where: { id: otherId },
+      data: { nearbyPlaceIds: filtered },
+    })
+  }
+}
+
 // @desc    Create place
 // @route   POST /api/admin/places
 // @access  Admin
@@ -114,6 +151,7 @@ export const createPlace = asyncHandler(async (req, res) => {
   }
 
   const slug = generateSlug(title) + '-' + Date.now()
+  const nearby = nearbyPlaceIds || []
 
   const place = await prisma.place.create({
     data: {
@@ -128,9 +166,11 @@ export const createPlace = asyncHandler(async (req, res) => {
       video,
       isActive: isActive !== false,
       images: images || [],
-      nearbyPlaceIds: nearbyPlaceIds || [],
+      nearbyPlaceIds: nearby,
     },
   })
+
+  await syncNearbyPlaceIdsBidirectional(place.id, nearby, [])
 
   res.status(201).json(place)
 })
@@ -166,6 +206,9 @@ export const updatePlace = asyncHandler(async (req, res) => {
     ? generateSlug(title) + '-' + Date.now() 
     : existing.slug
 
+  const newNearby = nearbyPlaceIds !== undefined ? nearbyPlaceIds : existing.nearbyPlaceIds
+  const existingNearby = Array.isArray(existing.nearbyPlaceIds) ? existing.nearbyPlaceIds : []
+
   const place = await prisma.place.update({
     where: { id: req.params.id },
     data: {
@@ -180,9 +223,13 @@ export const updatePlace = asyncHandler(async (req, res) => {
       video,
       isActive: isActive !== undefined ? Boolean(isActive) : undefined,
       images: images || undefined,
-      nearbyPlaceIds: nearbyPlaceIds !== undefined ? nearbyPlaceIds : undefined,
+      nearbyPlaceIds: newNearby !== undefined ? newNearby : undefined,
     },
   })
+
+  if (nearbyPlaceIds !== undefined) {
+    await syncNearbyPlaceIdsBidirectional(req.params.id, newNearby, existingNearby)
+  }
 
   res.json(place)
 })
@@ -191,8 +238,9 @@ export const updatePlace = asyncHandler(async (req, res) => {
 // @route   DELETE /api/admin/places/:id
 // @access  Admin
 export const deletePlace = asyncHandler(async (req, res) => {
+  const placeId = req.params.id
   const existing = await prisma.place.findUnique({
-    where: { id: req.params.id },
+    where: { id: placeId },
   })
 
   if (!existing) {
@@ -200,8 +248,24 @@ export const deletePlace = asyncHandler(async (req, res) => {
     throw new Error('Место не найдено')
   }
 
+  const nearbyIds = Array.isArray(existing.nearbyPlaceIds) ? existing.nearbyPlaceIds : []
+  for (const otherId of nearbyIds) {
+    const other = await prisma.place.findUnique({
+      where: { id: otherId },
+      select: { nearbyPlaceIds: true },
+    })
+    if (!other) continue
+    const ids = Array.isArray(other.nearbyPlaceIds) ? other.nearbyPlaceIds : []
+    const filtered = ids.filter((id) => id !== placeId)
+    if (filtered.length === ids.length) continue
+    await prisma.place.update({
+      where: { id: otherId },
+      data: { nearbyPlaceIds: filtered },
+    })
+  }
+
   await prisma.place.delete({
-    where: { id: req.params.id },
+    where: { id: placeId },
   })
 
   res.json({ message: 'Место удалено' })

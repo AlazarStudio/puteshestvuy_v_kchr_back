@@ -9,8 +9,11 @@ export const getReviews = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 10
   const skip = (page - 1) * limit
   const status = req.query.status
+  const entityType = req.query.entityType
 
-  const where = status ? { status } : {}
+  const where = {}
+  if (status) where.status = status
+  if (entityType && ['route', 'place', 'service'].includes(entityType)) where.entityType = entityType
 
   const [items, total] = await Promise.all([
     prisma.review.findMany({
