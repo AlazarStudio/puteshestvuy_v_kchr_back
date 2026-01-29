@@ -87,22 +87,24 @@ model RoutePoint {
 // =============== МЕСТА ===============
 
 model Place {
-  id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  title            String
-  slug             String   @unique
-  location         String?
-  shortDescription String?  @map("short_description")
-  description      String?
-  howToGet         String?  @map("how_to_get")
-  audioGuide       String?  @map("audio_guide")
-  video            String?
-  rating           Float?   @default(0)
-  reviewsCount     Int      @default(0) @map("reviews_count")
-  isActive         Boolean  @default(true) @map("is_active")
-  images           String[]
-  reviews          Review[]
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  title             String
+  slug              String   @unique
+  location          String?
+  shortDescription  String?  @map("short_description")
+  description       String?
+  howToGet          String?  @map("how_to_get")
+  mapUrl            String?  @map("map_url")
+  audioGuide        String?  @map("audio_guide")
+  video             String?
+  rating            Float?   @default(0)
+  reviewsCount      Int      @default(0) @map("reviews_count")
+  isActive          Boolean  @default(true) @map("is_active")
+  images            String[]
+  nearbyPlaceIds    String[] @db.ObjectId @map("nearby_place_ids")
+  reviews           Review[]
 
   @@map("places")
 }

@@ -26,16 +26,19 @@ export const getPlaces = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 10
   const skip = (page - 1) * limit
   const search = req.query.search || ''
+  const byLocation = (req.query.byLocation || '').trim()
 
-  const where = search
-    ? {
-        OR: [
-          { title: { contains: search, mode: 'insensitive' } },
-          { location: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-        ],
-      }
-    : {}
+  const where = {}
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { location: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+    ]
+  }
+  if (byLocation) {
+    where.location = { contains: byLocation, mode: 'insensitive' }
+  }
 
   const [items, total] = await Promise.all([
     prisma.place.findMany({
@@ -80,7 +83,11 @@ export const getPlaceById = asyncHandler(async (req, res) => {
     throw new Error('Место не найдено')
   }
 
-  res.json(place)
+  const safePlace = {
+    ...place,
+    nearbyPlaceIds: Array.isArray(place.nearbyPlaceIds) ? place.nearbyPlaceIds : [],
+  }
+  res.json(safePlace)
 })
 
 // @desc    Create place
@@ -93,10 +100,12 @@ export const createPlace = asyncHandler(async (req, res) => {
     shortDescription,
     description,
     howToGet,
+    mapUrl,
     audioGuide,
     video,
     isActive,
     images,
+    nearbyPlaceIds,
   } = req.body
 
   if (!title) {
@@ -114,10 +123,12 @@ export const createPlace = asyncHandler(async (req, res) => {
       shortDescription,
       description,
       howToGet,
+      mapUrl,
       audioGuide,
       video,
       isActive: isActive !== false,
       images: images || [],
+      nearbyPlaceIds: nearbyPlaceIds || [],
     },
   })
 
@@ -143,10 +154,12 @@ export const updatePlace = asyncHandler(async (req, res) => {
     shortDescription,
     description,
     howToGet,
+    mapUrl,
     audioGuide,
     video,
     isActive,
     images,
+    nearbyPlaceIds,
   } = req.body
 
   const slug = title !== existing.title 
@@ -162,10 +175,12 @@ export const updatePlace = asyncHandler(async (req, res) => {
       shortDescription,
       description,
       howToGet,
+      mapUrl: mapUrl !== undefined ? mapUrl : undefined,
       audioGuide,
       video,
       isActive: isActive !== undefined ? Boolean(isActive) : undefined,
       images: images || undefined,
+      nearbyPlaceIds: nearbyPlaceIds !== undefined ? nearbyPlaceIds : undefined,
     },
   })
 
