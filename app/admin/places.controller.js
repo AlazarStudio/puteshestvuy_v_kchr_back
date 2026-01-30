@@ -134,6 +134,8 @@ export const createPlace = asyncHandler(async (req, res) => {
   const {
     title,
     location,
+    latitude,
+    longitude,
     shortDescription,
     description,
     howToGet,
@@ -158,6 +160,8 @@ export const createPlace = asyncHandler(async (req, res) => {
       title,
       slug,
       location,
+      latitude: latitude != null ? Number(latitude) : null,
+      longitude: longitude != null ? Number(longitude) : null,
       shortDescription,
       description,
       howToGet,
@@ -191,6 +195,8 @@ export const updatePlace = asyncHandler(async (req, res) => {
   const {
     title,
     location,
+    latitude,
+    longitude,
     shortDescription,
     description,
     howToGet,
@@ -202,29 +208,30 @@ export const updatePlace = asyncHandler(async (req, res) => {
     nearbyPlaceIds,
   } = req.body
 
-  const slug = title !== existing.title 
-    ? generateSlug(title) + '-' + Date.now() 
-    : existing.slug
+  const data = {}
+  if (title !== undefined) {
+    data.title = title
+    data.slug = title !== existing.title ? generateSlug(title) + '-' + Date.now() : existing.slug
+  }
+  if (location !== undefined) data.location = location
+  if (latitude !== undefined) data.latitude = latitude != null ? Number(latitude) : null
+  if (longitude !== undefined) data.longitude = longitude != null ? Number(longitude) : null
+  if (shortDescription !== undefined) data.shortDescription = shortDescription
+  if (description !== undefined) data.description = description
+  if (howToGet !== undefined) data.howToGet = howToGet
+  if (mapUrl !== undefined) data.mapUrl = mapUrl
+  if (audioGuide !== undefined) data.audioGuide = audioGuide
+  if (video !== undefined) data.video = video
+  if (isActive !== undefined) data.isActive = Boolean(isActive)
+  if (images !== undefined) data.images = images
+  if (nearbyPlaceIds !== undefined) data.nearbyPlaceIds = nearbyPlaceIds
 
   const newNearby = nearbyPlaceIds !== undefined ? nearbyPlaceIds : existing.nearbyPlaceIds
   const existingNearby = Array.isArray(existing.nearbyPlaceIds) ? existing.nearbyPlaceIds : []
 
   const place = await prisma.place.update({
     where: { id: req.params.id },
-    data: {
-      title,
-      slug,
-      location,
-      shortDescription,
-      description,
-      howToGet,
-      mapUrl: mapUrl !== undefined ? mapUrl : undefined,
-      audioGuide,
-      video,
-      isActive: isActive !== undefined ? Boolean(isActive) : undefined,
-      images: images || undefined,
-      nearbyPlaceIds: newNearby !== undefined ? newNearby : undefined,
-    },
+    data,
   })
 
   if (nearbyPlaceIds !== undefined) {

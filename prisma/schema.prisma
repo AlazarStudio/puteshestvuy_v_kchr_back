@@ -93,6 +93,8 @@ model Place {
   title             String
   slug              String   @unique
   location          String?
+  latitude          Float?   // широта для карты
+  longitude         Float?   // долгота для карты
   shortDescription  String?  @map("short_description")
   description       String?
   howToGet          String?  @map("how_to_get")
