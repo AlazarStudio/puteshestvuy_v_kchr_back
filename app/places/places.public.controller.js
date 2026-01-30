@@ -35,7 +35,7 @@ export const getPlacesPublic = asyncHandler(async (req, res) => {
   res.json({
     items: items.map((item) => ({
       ...item,
-      image: item.images?.[0] || null,
+      image: item.image || item.images?.[0] || null,
     })),
     pagination: {
       page,
@@ -79,6 +79,7 @@ export const getPlaceByIdOrSlugPublic = asyncHandler(async (req, res) => {
           shortDescription: true,
           rating: true,
           reviewsCount: true,
+          image: true,
           images: true,
         },
       })
@@ -89,7 +90,7 @@ export const getPlaceByIdOrSlugPublic = asyncHandler(async (req, res) => {
     nearbyPlaceIds,
     nearbyPlaces: nearbyPlaces.map((p) => ({
       ...p,
-      image: p.images?.[0] || null,
+      image: p.image || p.images?.[0] || null,
     })),
   }
 

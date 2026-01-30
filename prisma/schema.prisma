@@ -104,7 +104,8 @@ model Place {
   rating            Float?   @default(0)
   reviewsCount      Int      @default(0) @map("reviews_count")
   isActive          Boolean  @default(true) @map("is_active")
-  images            String[]
+  image             String?  // превью (обложка), одна картинка с кропом
+  images            String[] // фотогалерея
   nearbyPlaceIds    String[] @db.ObjectId @map("nearby_place_ids")
   reviews           Review[]
 

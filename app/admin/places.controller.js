@@ -53,7 +53,7 @@ export const getPlaces = asyncHandler(async (req, res) => {
   res.json({
     items: items.map(item => ({
       ...item,
-      image: item.images?.[0] || null,
+      image: item.image || item.images?.[0] || null,
     })),
     pagination: {
       page,
@@ -143,6 +143,7 @@ export const createPlace = asyncHandler(async (req, res) => {
     audioGuide,
     video,
     isActive,
+    image,
     images,
     nearbyPlaceIds,
   } = req.body
@@ -169,6 +170,7 @@ export const createPlace = asyncHandler(async (req, res) => {
       audioGuide,
       video,
       isActive: isActive !== false,
+      image: image || null,
       images: images || [],
       nearbyPlaceIds: nearby,
     },
@@ -204,6 +206,7 @@ export const updatePlace = asyncHandler(async (req, res) => {
     audioGuide,
     video,
     isActive,
+    image,
     images,
     nearbyPlaceIds,
   } = req.body
@@ -223,6 +226,7 @@ export const updatePlace = asyncHandler(async (req, res) => {
   if (audioGuide !== undefined) data.audioGuide = audioGuide
   if (video !== undefined) data.video = video
   if (isActive !== undefined) data.isActive = Boolean(isActive)
+  if (image !== undefined) data.image = image || null
   if (images !== undefined) data.images = images
   if (nearbyPlaceIds !== undefined) data.nearbyPlaceIds = nearbyPlaceIds
 
