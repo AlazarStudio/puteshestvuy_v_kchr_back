@@ -54,9 +54,20 @@ import { getDashboardStats } from "./stats.controller.js"
 import {
   getPlaceFilters,
   updatePlaceFilters,
+  addPlaceFilterGroup,
+  removePlaceFilterGroup,
   replaceFilterValue,
   removeFilterValue,
 } from "./place-filters.controller.js"
+
+import {
+  getRouteFilters,
+  updateRouteFilters,
+  addRouteFilterGroup,
+  removeRouteFilterGroup,
+  replaceRouteFilterValue,
+  removeRouteFilterValue,
+} from "./route-filters.controller.js"
 
 const router = express.Router()
 
@@ -149,7 +160,17 @@ router.delete("/media/:id", deleteMedia)
 // Place filters (конфигурация фильтров мест)
 router.get("/place-filters", getPlaceFilters)
 router.put("/place-filters", updatePlaceFilters)
+router.post("/place-filters/add-group", addPlaceFilterGroup)
+router.post("/place-filters/remove-group", removePlaceFilterGroup)
 router.post("/place-filters/replace-value", replaceFilterValue)
 router.post("/place-filters/remove-value", removeFilterValue)
+
+// Route filters (конфигурация фильтров маршрутов)
+router.get("/route-filters", getRouteFilters)
+router.put("/route-filters", updateRouteFilters)
+router.post("/route-filters/add-group", addRouteFilterGroup)
+router.post("/route-filters/remove-group", removeRouteFilterGroup)
+router.post("/route-filters/replace-value", replaceRouteFilterValue)
+router.post("/route-filters/remove-value", removeRouteFilterValue)
 
 export default router

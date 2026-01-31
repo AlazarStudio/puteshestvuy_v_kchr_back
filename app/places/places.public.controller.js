@@ -8,6 +8,17 @@ const DEFAULT_FILTERS = {
   accessibility: ['только пешком', 'на машине'],
 }
 
+function getExtraGroupsFromConfig(config) {
+  const raw = config?.extraGroups
+  if (!raw) return []
+  const arr = Array.isArray(raw) ? raw : [raw]
+  return arr.filter((g) => g && typeof g.key === 'string' && g.key.trim()).map((g) => ({
+    key: String(g.key).trim(),
+    label: typeof g.label === 'string' ? g.label.trim() || g.key : String(g.key),
+    values: Array.isArray(g.values) ? g.values.filter((v) => typeof v === 'string' && v.trim()) : [],
+  }))
+}
+
 // @desc    Get place filters config (public, no auth) — для фильтра на сайте
 // @route   GET /api/places/filters
 export const getPlaceFiltersPublic = asyncHandler(async (req, res) => {
@@ -15,13 +26,14 @@ export const getPlaceFiltersPublic = asyncHandler(async (req, res) => {
     where: { id: 'default' },
   })
   if (!config) {
-    return res.json(DEFAULT_FILTERS)
+    return res.json({ ...DEFAULT_FILTERS, extraGroups: [] })
   }
   res.json({
     directions: config.directions ?? [],
     seasons: config.seasons ?? [],
     objectTypes: config.objectTypes ?? [],
     accessibility: config.accessibility ?? [],
+    extraGroups: getExtraGroupsFromConfig(config),
   })
 })
 

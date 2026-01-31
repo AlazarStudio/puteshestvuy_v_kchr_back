@@ -96,6 +96,7 @@ export const createRoute = asyncHandler(async (req, res) => {
     duration,
     difficulty,
     transport,
+    customFilters,
     isFamily,
     hasOvernight,
     elevationGain,
@@ -135,6 +136,7 @@ export const createRoute = asyncHandler(async (req, res) => {
       isActive: isActive !== false,
       images: images || [],
       placeIds: placeIds || [],
+      customFilters: customFilters && typeof customFilters === 'object' ? customFilters : null,
       points: points
         ? {
             create: points.map((point, index) => ({
@@ -174,6 +176,7 @@ export const updateRoute = asyncHandler(async (req, res) => {
     duration,
     difficulty,
     transport,
+    customFilters,
     isFamily,
     hasOvernight,
     elevationGain,
@@ -212,6 +215,7 @@ export const updateRoute = asyncHandler(async (req, res) => {
       isActive: isActive !== undefined ? Boolean(isActive) : undefined,
       images: images || undefined,
       placeIds: placeIds || undefined,
+      customFilters: customFilters !== undefined ? (customFilters && typeof customFilters === 'object' ? customFilters : null) : undefined,
     },
     include: { points: true },
   })

@@ -66,6 +66,7 @@ model Route {
   points           RoutePoint[]
   reviews          Review[]
   placeIds         String[]     @db.ObjectId @map("place_ids")
+  customFilters    Json?        @map("custom_filters") // значения дополнительных групп фильтров { "key": ["v1"] }
 
   @@map("routes")
 }
@@ -82,6 +83,23 @@ model RoutePoint {
   route       Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
 
   @@map("route_points")
+}
+
+// Конфигурация фильтров маршрутов (группы и значения для сайта и формы маршрута)
+model RouteFilterConfig {
+  id                 String   @id @default("default") @map("_id")
+  seasons            String[]
+  transport          String[]
+  durationOptions    String[] @map("duration_options")     // Время прохождения: 2 дня, 3ч 30м
+  difficultyLevels   String[] @map("difficulty_levels")     // Сложность: 1, 2, 3, 4, 5
+  distanceOptions    String[] @map("distance_options")     // Расстояние: до 10 км, 10–50 км
+  elevationOptions   String[] @map("elevation_options")      // Перепад высот: до 500 м, 500–1000 м
+  isFamilyOptions    String[] @map("is_family_options")     // Семейный маршрут: Да
+  hasOvernightOptions String[] @map("has_overnight_options") // С ночевкой: Да
+  extraGroups        Json?    @map("extra_groups")          // [{ key, label, values }]
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("route_filter_config")
 }
 
 // =============== МЕСТА ===============
@@ -110,6 +128,7 @@ model Place {
   seasons           String[] // Сезон: зима, весна, лето, осень
   objectTypes       String[] @map("object_types") // Вид объекта: заповедник, горы, озера/реки, ледники, водопады, ущелья, пещеры
   accessibility     String[] // Доступность: только пешком, на машине
+  customFilters     Json?    @map("custom_filters") // значения дополнительных групп { "key": ["v1"] }
   nearbyPlaceIds    String[] @db.ObjectId @map("nearby_place_ids")
   reviews           Review[]
 
@@ -123,6 +142,7 @@ model PlaceFilterConfig {
   seasons       String[]
   objectTypes   String[] @map("object_types")
   accessibility String[]
+  extraGroups   Json?    @map("extra_groups") // [{ key, label, values }]
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@map("place_filter_config")
