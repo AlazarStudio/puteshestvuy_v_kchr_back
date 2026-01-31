@@ -62,6 +62,8 @@ model Route {
   importantInfo    String?      @map("important_info")
   mapUrl           String?      @map("map_url")
   isActive         Boolean      @default(true) @map("is_active")
+  rating           Float?       @default(0)
+  reviewsCount     Int          @default(0) @map("reviews_count")
   images           String[]     // массив URL изображений
   points           RoutePoint[]
   reviews          Review[]
@@ -99,7 +101,9 @@ model RouteFilterConfig {
   elevationOptions   String[] @map("elevation_options")      // Перепад высот: до 500 м, 500–1000 м
   isFamilyOptions    String[] @map("is_family_options")     // Семейный маршрут: Да
   hasOvernightOptions String[] @map("has_overnight_options") // С ночевкой: Да
-  extraGroups        Json?    @map("extra_groups")          // [{ key, label, values }]
+  extraGroups        Json?    @map("extra_groups")          // [{ key, label, icon?, iconType?, values }]
+  fixedGroupMeta     Json?    @map("fixed_group_meta")       // { "seasons": { label?, icon?, iconType? }, ... }
+  hiddenFixedGroups  Json?    @map("hidden_fixed_groups")   // ["seasons", ...] — скрытые встроенные группы
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@map("route_filter_config")
@@ -140,13 +144,15 @@ model Place {
 
 // Конфигурация фильтров мест (одна запись: группы и значения для сайта и формы места)
 model PlaceFilterConfig {
-  id            String   @id @default("default") @map("_id")
-  directions    String[]
-  seasons       String[]
-  objectTypes   String[] @map("object_types")
-  accessibility String[]
-  extraGroups   Json?    @map("extra_groups") // [{ key, label, values }]
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default("default") @map("_id")
+  directions         String[]
+  seasons            String[]
+  objectTypes        String[] @map("object_types")
+  accessibility       String[]
+  extraGroups        Json?    @map("extra_groups")   // [{ key, label, icon?, iconType?, values }]
+  fixedGroupMeta     Json?    @map("fixed_group_meta")   // { "directions": { label?, icon?, iconType? }, ... }
+  hiddenFixedGroups  Json?    @map("hidden_fixed_groups") // ["directions", ...] — скрытые встроенные группы
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@map("place_filter_config")
 }

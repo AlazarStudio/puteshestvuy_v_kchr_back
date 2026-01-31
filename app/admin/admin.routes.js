@@ -56,6 +56,7 @@ import {
   updatePlaceFilters,
   addPlaceFilterGroup,
   removePlaceFilterGroup,
+  updatePlaceFilterGroupMeta,
   replaceFilterValue,
   removeFilterValue,
 } from "./place-filters.controller.js"
@@ -65,6 +66,7 @@ import {
   updateRouteFilters,
   addRouteFilterGroup,
   removeRouteFilterGroup,
+  updateRouteFilterGroupMeta,
   replaceRouteFilterValue,
   removeRouteFilterValue,
 } from "./route-filters.controller.js"
@@ -162,6 +164,7 @@ router.get("/place-filters", getPlaceFilters)
 router.put("/place-filters", updatePlaceFilters)
 router.post("/place-filters/add-group", addPlaceFilterGroup)
 router.post("/place-filters/remove-group", removePlaceFilterGroup)
+router.patch("/place-filters/group-meta", updatePlaceFilterGroupMeta)
 router.post("/place-filters/replace-value", replaceFilterValue)
 router.post("/place-filters/remove-value", removeFilterValue)
 
@@ -170,6 +173,7 @@ router.get("/route-filters", getRouteFilters)
 router.put("/route-filters", updateRouteFilters)
 router.post("/route-filters/add-group", addRouteFilterGroup)
 router.post("/route-filters/remove-group", removeRouteFilterGroup)
+router.patch("/route-filters/group-meta", updateRouteFilterGroupMeta)
 router.post("/route-filters/replace-value", replaceRouteFilterValue)
 router.post("/route-filters/remove-value", removeRouteFilterValue)
 

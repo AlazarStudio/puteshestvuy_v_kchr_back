@@ -147,7 +147,10 @@ async function updateEntityRating(entityType, entityId) {
 
   switch (entityType) {
     case 'route':
-      // Routes не имеют полей rating/reviewsCount в текущей схеме
+      await prisma.route.update({
+        where: { id: entityId },
+        data: updateData,
+      })
       break
     case 'place':
       await prisma.place.update({

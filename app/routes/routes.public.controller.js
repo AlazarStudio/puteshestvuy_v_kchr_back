@@ -19,6 +19,8 @@ function getExtraGroupsFromConfig(config) {
   return arr.filter((g) => g && typeof g.key === 'string' && g.key.trim()).map((g) => ({
     key: String(g.key).trim(),
     label: typeof g.label === 'string' ? g.label.trim() || g.key : String(g.key),
+    icon: typeof g.icon === 'string' && g.icon.trim() ? g.icon.trim() : null,
+    iconType: g.iconType === 'upload' || g.iconType === 'library' ? g.iconType : null,
     values: Array.isArray(g.values) ? g.values.filter((v) => typeof v === 'string' && v.trim()) : [],
   }))
 }
@@ -30,8 +32,14 @@ export const getRouteFiltersPublic = asyncHandler(async (req, res) => {
     where: { id: 'default' },
   })
   if (!config) {
-    return res.json({ ...DEFAULT_FILTERS, extraGroups: [] })
+    return res.json({
+      ...DEFAULT_FILTERS,
+      extraGroups: [],
+      fixedGroupMeta: {},
+    })
   }
+  const extraGroups = getExtraGroupsFromConfig(config)
+  const fixedGroupMeta = config.fixedGroupMeta && typeof config.fixedGroupMeta === 'object' ? config.fixedGroupMeta : {}
   res.json({
     seasons: config.seasons ?? DEFAULT_FILTERS.seasons,
     transport: config.transport ?? DEFAULT_FILTERS.transport,
@@ -41,7 +49,8 @@ export const getRouteFiltersPublic = asyncHandler(async (req, res) => {
     elevationOptions: config.elevationOptions ?? DEFAULT_FILTERS.elevationOptions,
     isFamilyOptions: config.isFamilyOptions ?? DEFAULT_FILTERS.isFamilyOptions,
     hasOvernightOptions: config.hasOvernightOptions ?? DEFAULT_FILTERS.hasOvernightOptions,
-    extraGroups: getExtraGroupsFromConfig(config),
+    extraGroups,
+    fixedGroupMeta,
   })
 })
 
@@ -164,13 +173,79 @@ export const getRouteByIdOrSlugPublic = asyncHandler(async (req, res) => {
       })).sort((a, b) => placeIds.indexOf(a.id) - placeIds.indexOf(b.id))
     : []
 
+  const guideIds = Array.isArray(route.guideIds) ? route.guideIds : []
+  const guides = guideIds.length
+    ? (await prisma.service.findMany({
+        where: { id: { in: guideIds }, isActive: true },
+        select: { id: true, title: true, slug: true, images: true, rating: true, reviewsCount: true, isVerified: true },
+      })).sort((a, b) => guideIds.indexOf(a.id) - guideIds.indexOf(b.id))
+    : []
+
+  const nearbyPlaceIds = Array.isArray(route.nearbyPlaceIds) ? route.nearbyPlaceIds : []
+  const nearbyPlaces = nearbyPlaceIds.length
+    ? (await prisma.place.findMany({
+        where: { id: { in: nearbyPlaceIds }, isActive: true },
+        select: { id: true, title: true, slug: true, location: true, image: true, images: true, shortDescription: true, rating: true, reviewsCount: true },
+      })).sort((a, b) => nearbyPlaceIds.indexOf(a.id) - nearbyPlaceIds.indexOf(b.id))
+    : []
+
   const normalized = {
     ...route,
     placeIds,
-    nearbyPlaceIds: Array.isArray(route.nearbyPlaceIds) ? route.nearbyPlaceIds : [],
-    guideIds: Array.isArray(route.guideIds) ? route.guideIds : [],
+    nearbyPlaceIds,
+    guideIds,
     similarRouteIds: Array.isArray(route.similarRouteIds) ? route.similarRouteIds : [],
     places,
+    guides,
+    nearbyPlaces,
   }
   res.json(normalized)
+})
+
+// @desc    Create review for route (public, no auth) — статус pending, модерация в админке
+// @route   POST /api/routes/:routeId/reviews
+export const createRouteReview = asyncHandler(async (req, res) => {
+  const { routeId } = req.params
+  const { authorName, rating, text, authorAvatar } = req.body || {}
+
+  if (!authorName || !authorName.trim()) {
+    res.status(400)
+    throw new Error('Укажите имя')
+  }
+  const ratingNum = parseInt(rating, 10)
+  if (Number.isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+    res.status(400)
+    throw new Error('Рейтинг должен быть от 1 до 5')
+  }
+  if (!text || !text.trim()) {
+    res.status(400)
+    throw new Error('Напишите текст отзыва')
+  }
+
+  const isObjectId = /^[a-f\d]{24}$/i.test(routeId)
+  const route = await prisma.route.findFirst({
+    where: isObjectId ? { id: routeId, isActive: true } : { slug: routeId, isActive: true },
+    select: { id: true, title: true },
+  })
+
+  if (!route) {
+    res.status(404)
+    throw new Error('Маршрут не найден')
+  }
+
+  const review = await prisma.review.create({
+    data: {
+      authorName: authorName.trim(),
+      authorAvatar: authorAvatar && String(authorAvatar).trim() ? String(authorAvatar).trim() : null,
+      rating: ratingNum,
+      text: text.trim(),
+      status: 'pending',
+      entityType: 'route',
+      entityId: route.id,
+      entityTitle: route.title,
+      routeId: route.id,
+    },
+  })
+
+  res.status(201).json(review)
 })
