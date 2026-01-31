@@ -194,7 +194,7 @@ export const updateRoute = asyncHandler(async (req, res) => {
     ? generateSlug(title) + '-' + Date.now() 
     : existing.slug
 
-  const route = await prisma.route.update({
+  await prisma.route.update({
     where: { id: req.params.id },
     data: {
       title,
@@ -217,7 +217,26 @@ export const updateRoute = asyncHandler(async (req, res) => {
       placeIds: placeIds || undefined,
       customFilters: customFilters !== undefined ? (customFilters && typeof customFilters === 'object' ? customFilters : null) : undefined,
     },
-    include: { points: true },
+  })
+
+  if (points !== undefined) {
+    await prisma.routePoint.deleteMany({ where: { routeId: req.params.id } })
+    if (Array.isArray(points) && points.length > 0) {
+      await prisma.routePoint.createMany({
+        data: points.map((point, index) => ({
+          routeId: req.params.id,
+          title: point.title ?? '',
+          description: point.description ?? null,
+          image: point.image ?? null,
+          order: index,
+        })),
+      })
+    }
+  }
+
+  const route = await prisma.route.findUnique({
+    where: { id: req.params.id },
+    include: { points: { orderBy: { order: 'asc' } } },
   })
 
   res.json(route)
