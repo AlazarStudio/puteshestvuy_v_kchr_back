@@ -80,7 +80,15 @@ export const getRouteById = asyncHandler(async (req, res) => {
     throw new Error('Маршрут не найден')
   }
 
-  res.json(route)
+  // Нормализуем ответ: старые документы в БД могут не иметь новых полей
+  const normalized = {
+    ...route,
+    placeIds: Array.isArray(route.placeIds) ? route.placeIds : [],
+    nearbyPlaceIds: Array.isArray(route.nearbyPlaceIds) ? route.nearbyPlaceIds : [],
+    guideIds: Array.isArray(route.guideIds) ? route.guideIds : [],
+    similarRouteIds: Array.isArray(route.similarRouteIds) ? route.similarRouteIds : [],
+  }
+  res.json(normalized)
 })
 
 // @desc    Create route
@@ -107,6 +115,9 @@ export const createRoute = asyncHandler(async (req, res) => {
     images,
     points,
     placeIds,
+    nearbyPlaceIds,
+    guideIds,
+    similarRouteIds,
   } = req.body
 
   if (!title) {
@@ -132,10 +143,13 @@ export const createRoute = asyncHandler(async (req, res) => {
       elevationGain: elevationGain ? parseFloat(elevationGain) : null,
       whatToBring,
       importantInfo,
-      mapUrl,
+      mapUrl: mapUrl ?? null,
       isActive: isActive !== false,
       images: images || [],
       placeIds: placeIds || [],
+      nearbyPlaceIds: nearbyPlaceIds || [],
+      guideIds: guideIds || [],
+      similarRouteIds: similarRouteIds || [],
       customFilters: customFilters && typeof customFilters === 'object' ? customFilters : null,
       points: points
         ? {
@@ -167,58 +181,43 @@ export const updateRoute = asyncHandler(async (req, res) => {
     throw new Error('Маршрут не найден')
   }
 
-  const {
-    title,
-    shortDescription,
-    description,
-    season,
-    distance,
-    duration,
-    difficulty,
-    transport,
-    customFilters,
-    isFamily,
-    hasOvernight,
-    elevationGain,
-    whatToBring,
-    importantInfo,
-    mapUrl,
-    isActive,
-    images,
-    points,
-    placeIds,
-  } = req.body
-
-  // Обновляем slug если изменился title
-  const slug = title !== existing.title 
-    ? generateSlug(title) + '-' + Date.now() 
+  const body = req.body || {}
+  const title = body.title !== undefined ? String(body.title) : existing.title
+  const slug = title !== existing.title
+    ? generateSlug(title) + '-' + Date.now()
     : existing.slug
+
+  const updateData = {
+    title,
+    slug,
+    shortDescription: body.shortDescription !== undefined ? (body.shortDescription ?? null) : existing.shortDescription,
+    description: body.description !== undefined ? (body.description ?? null) : existing.description,
+    season: body.season !== undefined ? (body.season ?? null) : existing.season,
+    distance: body.distance !== undefined ? (body.distance != null && body.distance !== '' ? parseFloat(body.distance) || null : null) : existing.distance,
+    duration: body.duration !== undefined ? (body.duration ?? null) : existing.duration,
+    difficulty: body.difficulty !== undefined ? (parseInt(body.difficulty, 10) || 3) : existing.difficulty,
+    transport: body.transport !== undefined ? (body.transport ?? null) : existing.transport,
+    isFamily: body.isFamily !== undefined ? Boolean(body.isFamily) : existing.isFamily,
+    hasOvernight: body.hasOvernight !== undefined ? Boolean(body.hasOvernight) : existing.hasOvernight,
+    elevationGain: body.elevationGain !== undefined ? (body.elevationGain != null && body.elevationGain !== '' ? parseFloat(body.elevationGain) || null : null) : existing.elevationGain,
+    whatToBring: body.whatToBring !== undefined ? (body.whatToBring ?? null) : existing.whatToBring,
+    importantInfo: body.importantInfo !== undefined ? (body.importantInfo ?? null) : existing.importantInfo,
+    mapUrl: body.mapUrl !== undefined ? (body.mapUrl ?? null) : existing.mapUrl,
+    isActive: body.isActive !== undefined ? Boolean(body.isActive) : existing.isActive,
+    images: Array.isArray(body.images) ? body.images : (existing.images ?? []),
+    placeIds: Array.isArray(body.placeIds) ? body.placeIds : (Array.isArray(existing.placeIds) ? existing.placeIds : []),
+    nearbyPlaceIds: Array.isArray(body.nearbyPlaceIds) ? body.nearbyPlaceIds : (Array.isArray(existing.nearbyPlaceIds) ? existing.nearbyPlaceIds : []),
+    guideIds: Array.isArray(body.guideIds) ? body.guideIds : (Array.isArray(existing.guideIds) ? existing.guideIds : []),
+    similarRouteIds: Array.isArray(body.similarRouteIds) ? body.similarRouteIds : (Array.isArray(existing.similarRouteIds) ? existing.similarRouteIds : []),
+    customFilters: body.customFilters !== undefined ? (body.customFilters && typeof body.customFilters === 'object' ? body.customFilters : null) : existing.customFilters,
+  }
 
   await prisma.route.update({
     where: { id: req.params.id },
-    data: {
-      title,
-      slug,
-      shortDescription,
-      description,
-      season,
-      distance: distance !== undefined ? parseFloat(distance) || null : undefined,
-      duration,
-      difficulty: difficulty !== undefined ? parseInt(difficulty) || 3 : undefined,
-      transport,
-      isFamily: isFamily !== undefined ? Boolean(isFamily) : undefined,
-      hasOvernight: hasOvernight !== undefined ? Boolean(hasOvernight) : undefined,
-      elevationGain: elevationGain !== undefined ? parseFloat(elevationGain) || null : undefined,
-      whatToBring,
-      importantInfo,
-      mapUrl,
-      isActive: isActive !== undefined ? Boolean(isActive) : undefined,
-      images: images || undefined,
-      placeIds: placeIds || undefined,
-      customFilters: customFilters !== undefined ? (customFilters && typeof customFilters === 'object' ? customFilters : null) : undefined,
-    },
+    data: updateData,
   })
 
+  const points = body.points
   if (points !== undefined) {
     await prisma.routePoint.deleteMany({ where: { routeId: req.params.id } })
     if (Array.isArray(points) && points.length > 0) {
@@ -239,7 +238,14 @@ export const updateRoute = asyncHandler(async (req, res) => {
     include: { points: { orderBy: { order: 'asc' } } },
   })
 
-  res.json(route)
+  const normalized = {
+    ...route,
+    placeIds: Array.isArray(route.placeIds) ? route.placeIds : [],
+    nearbyPlaceIds: Array.isArray(route.nearbyPlaceIds) ? route.nearbyPlaceIds : [],
+    guideIds: Array.isArray(route.guideIds) ? route.guideIds : [],
+    similarRouteIds: Array.isArray(route.similarRouteIds) ? route.similarRouteIds : [],
+  }
+  res.json(normalized)
 })
 
 // @desc    Delete route

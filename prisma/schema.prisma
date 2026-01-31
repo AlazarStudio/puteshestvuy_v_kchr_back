@@ -66,6 +66,9 @@ model Route {
   points           RoutePoint[]
   reviews          Review[]
   placeIds         String[]     @db.ObjectId @map("place_ids")
+  nearbyPlaceIds   String[]     @db.ObjectId @map("nearby_place_ids") // места рядом (локация совпадает с локациями мест маршрута)
+  guideIds         String[]     @db.ObjectId @map("guide_ids") // гиды (services с category Гид)
+  similarRouteIds  String[]     @db.ObjectId @map("similar_route_ids") // похожие маршруты (чем больше общих мест — тем похожее)
   customFilters    Json?        @map("custom_filters") // значения дополнительных групп фильтров { "key": ["v1"] }
 
   @@map("routes")

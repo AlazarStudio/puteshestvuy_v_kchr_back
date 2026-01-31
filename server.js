@@ -22,7 +22,7 @@ app.use(cors())
 async function main() {
   if (process.env.NODE_ENV === "development") app.use(morgan("dev"))
 
-  app.use(express.json())
+  app.use(express.json({ limit: '10mb' }))
 
   const __dirname = path.resolve()
 
