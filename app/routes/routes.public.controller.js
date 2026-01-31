@@ -1,0 +1,176 @@
+import asyncHandler from "express-async-handler"
+import { prisma } from "../prisma.js"
+
+const DEFAULT_FILTERS = {
+  seasons: ['Зима', 'Весна', 'Лето', 'Осень'],
+  transport: ['Пешком', 'Верхом', 'Автомобиль', 'Квадроцикл'],
+  durationOptions: ['Полдня', '1 день', '2 дня', '3ч 30м', '5 дней'],
+  difficultyLevels: ['1', '2', '3', '4', '5'],
+  distanceOptions: ['до 10 км', '10–50 км', '50–100 км', '100+ км'],
+  elevationOptions: ['до 500 м', '500–1000 м', '1000+ м'],
+  isFamilyOptions: ['Да'],
+  hasOvernightOptions: ['Да'],
+}
+
+function getExtraGroupsFromConfig(config) {
+  const raw = config?.extraGroups
+  if (!raw) return []
+  const arr = Array.isArray(raw) ? raw : [raw]
+  return arr.filter((g) => g && typeof g.key === 'string' && g.key.trim()).map((g) => ({
+    key: String(g.key).trim(),
+    label: typeof g.label === 'string' ? g.label.trim() || g.key : String(g.key),
+    values: Array.isArray(g.values) ? g.values.filter((v) => typeof v === 'string' && v.trim()) : [],
+  }))
+}
+
+// @desc    Get route filters config (public, no auth)
+// @route   GET /api/routes/filters
+export const getRouteFiltersPublic = asyncHandler(async (req, res) => {
+  const config = await prisma.routeFilterConfig.findUnique({
+    where: { id: 'default' },
+  })
+  if (!config) {
+    return res.json({ ...DEFAULT_FILTERS, extraGroups: [] })
+  }
+  res.json({
+    seasons: config.seasons ?? DEFAULT_FILTERS.seasons,
+    transport: config.transport ?? DEFAULT_FILTERS.transport,
+    durationOptions: config.durationOptions ?? DEFAULT_FILTERS.durationOptions,
+    difficultyLevels: config.difficultyLevels ?? DEFAULT_FILTERS.difficultyLevels,
+    distanceOptions: config.distanceOptions ?? DEFAULT_FILTERS.distanceOptions,
+    elevationOptions: config.elevationOptions ?? DEFAULT_FILTERS.elevationOptions,
+    isFamilyOptions: config.isFamilyOptions ?? DEFAULT_FILTERS.isFamilyOptions,
+    hasOvernightOptions: config.hasOvernightOptions ?? DEFAULT_FILTERS.hasOvernightOptions,
+    extraGroups: getExtraGroupsFromConfig(config),
+  })
+})
+
+// @desc    Get active routes (public, no auth)
+// @route   GET /api/routes
+export const getRoutesPublic = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1
+  const limit = Math.min(parseInt(req.query.limit) || 12, 100)
+  const skip = (page - 1) * limit
+  const search = (req.query.search || '').trim()
+  const sortBy = (req.query.sortBy || 'createdAt').toLowerCase()
+
+  const arr = (v) => (v == null ? [] : Array.isArray(v) ? v : [v])
+  const seasonsArr = arr(req.query.seasons || req.query['seasons[]']).filter(Boolean)
+  const transportArr = arr(req.query.transport || req.query['transport[]']).filter(Boolean)
+  const durationArr = arr(req.query.durationOptions || req.query['durationOptions[]']).filter(Boolean)
+  const difficultyArr = arr(req.query.difficultyLevels || req.query['difficultyLevels[]']).filter(Boolean)
+
+  const where = { isActive: true }
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+      { shortDescription: { contains: search, mode: 'insensitive' } },
+    ]
+  }
+  if (seasonsArr.length) {
+    where.season = { in: seasonsArr }
+  }
+  if (transportArr.length) {
+    where.transport = { in: transportArr }
+  }
+  if (durationArr.length) {
+    where.duration = { in: durationArr }
+  }
+  if (difficultyArr.length) {
+    const nums = difficultyArr.map((d) => parseInt(d, 10)).filter((n) => Number.isFinite(n))
+    if (nums.length) where.difficulty = { in: nums }
+  }
+
+  const orderBy = sortBy === 'difficulty' ? { difficulty: 'asc' } : { createdAt: 'desc' }
+
+  const [items, total] = await Promise.all([
+    prisma.route.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        points: { orderBy: { order: 'asc' } },
+      },
+    }),
+    prisma.route.count({ where }),
+  ])
+
+  const placeIdsList = items.flatMap((r) => Array.isArray(r.placeIds) ? r.placeIds : [])
+  const uniquePlaceIds = [...new Set(placeIdsList)]
+  const placesMap = uniquePlaceIds.length
+    ? Object.fromEntries(
+        (await prisma.place.findMany({
+          where: { id: { in: uniquePlaceIds }, isActive: true },
+          select: { id: true, title: true, slug: true },
+        })).map((p) => [p.id, p])
+      )
+    : {}
+
+  const normalized = items.map((route) => {
+    const placeIds = Array.isArray(route.placeIds) ? route.placeIds : []
+    const places = placeIds.map((id) => placesMap[id]).filter(Boolean)
+    return {
+      ...route,
+      placeIds,
+      nearbyPlaceIds: Array.isArray(route.nearbyPlaceIds) ? route.nearbyPlaceIds : [],
+      guideIds: Array.isArray(route.guideIds) ? route.guideIds : [],
+      similarRouteIds: Array.isArray(route.similarRouteIds) ? route.similarRouteIds : [],
+      places,
+    }
+  })
+
+  res.json({
+    items: normalized,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit) || 1,
+    },
+  })
+})
+
+// @desc    Get route by id or slug (public, no auth)
+// @route   GET /api/routes/:idOrSlug
+export const getRouteByIdOrSlugPublic = asyncHandler(async (req, res) => {
+  const { idOrSlug } = req.params
+  const isObjectId = /^[a-f\d]{24}$/i.test(idOrSlug)
+
+  const route = await prisma.route.findFirst({
+    where: isObjectId
+      ? { id: idOrSlug, isActive: true }
+      : { slug: idOrSlug, isActive: true },
+    include: {
+      points: { orderBy: { order: 'asc' } },
+      reviews: {
+        where: { status: 'approved' },
+        orderBy: { createdAt: 'desc' },
+      },
+    },
+  })
+
+  if (!route) {
+    res.status(404)
+    throw new Error('Маршрут не найден')
+  }
+
+  const placeIds = Array.isArray(route.placeIds) ? route.placeIds : []
+  const places = placeIds.length
+    ? (await prisma.place.findMany({
+        where: { id: { in: placeIds }, isActive: true },
+        select: { id: true, title: true, slug: true, location: true, latitude: true, longitude: true, image: true, images: true, description: true, rating: true, reviewsCount: true },
+      })).sort((a, b) => placeIds.indexOf(a.id) - placeIds.indexOf(b.id))
+    : []
+
+  const normalized = {
+    ...route,
+    placeIds,
+    nearbyPlaceIds: Array.isArray(route.nearbyPlaceIds) ? route.nearbyPlaceIds : [],
+    guideIds: Array.isArray(route.guideIds) ? route.guideIds : [],
+    similarRouteIds: Array.isArray(route.similarRouteIds) ? route.similarRouteIds : [],
+    places,
+  }
+  res.json(normalized)
+})
