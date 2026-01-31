@@ -106,10 +106,26 @@ model Place {
   isActive          Boolean  @default(true) @map("is_active")
   image             String?  // превью (обложка), одна картинка с кропом
   images            String[] // фотогалерея
+  directions        String[] // Направление: Архыз, Домбай, Джылы-Суу, Медовые водопады
+  seasons           String[] // Сезон: зима, весна, лето, осень
+  objectTypes       String[] @map("object_types") // Вид объекта: заповедник, горы, озера/реки, ледники, водопады, ущелья, пещеры
+  accessibility     String[] // Доступность: только пешком, на машине
   nearbyPlaceIds    String[] @db.ObjectId @map("nearby_place_ids")
   reviews           Review[]
 
   @@map("places")
+}
+
+// Конфигурация фильтров мест (одна запись: группы и значения для сайта и формы места)
+model PlaceFilterConfig {
+  id            String   @id @default("default") @map("_id")
+  directions    String[]
+  seasons       String[]
+  objectTypes   String[] @map("object_types")
+  accessibility String[]
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("place_filter_config")
 }
 
 // =============== НОВОСТИ ===============

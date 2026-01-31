@@ -145,6 +145,10 @@ export const createPlace = asyncHandler(async (req, res) => {
     isActive,
     image,
     images,
+    directions,
+    seasons,
+    objectTypes,
+    accessibility,
     nearbyPlaceIds,
   } = req.body
 
@@ -172,6 +176,10 @@ export const createPlace = asyncHandler(async (req, res) => {
       isActive: isActive !== false,
       image: image || null,
       images: images || [],
+      directions: Array.isArray(directions) ? directions : [],
+      seasons: Array.isArray(seasons) ? seasons : [],
+      objectTypes: Array.isArray(objectTypes) ? objectTypes : [],
+      accessibility: Array.isArray(accessibility) ? accessibility : [],
       nearbyPlaceIds: nearby,
     },
   })
@@ -208,6 +216,10 @@ export const updatePlace = asyncHandler(async (req, res) => {
     isActive,
     image,
     images,
+    directions,
+    seasons,
+    objectTypes,
+    accessibility,
     nearbyPlaceIds,
   } = req.body
 
@@ -228,6 +240,10 @@ export const updatePlace = asyncHandler(async (req, res) => {
   if (isActive !== undefined) data.isActive = Boolean(isActive)
   if (image !== undefined) data.image = image || null
   if (images !== undefined) data.images = images
+  if (directions !== undefined) data.directions = Array.isArray(directions) ? directions : []
+  if (seasons !== undefined) data.seasons = Array.isArray(seasons) ? seasons : []
+  if (objectTypes !== undefined) data.objectTypes = Array.isArray(objectTypes) ? objectTypes : []
+  if (accessibility !== undefined) data.accessibility = Array.isArray(accessibility) ? accessibility : []
   if (nearbyPlaceIds !== undefined) data.nearbyPlaceIds = nearbyPlaceIds
 
   const newNearby = nearbyPlaceIds !== undefined ? nearbyPlaceIds : existing.nearbyPlaceIds

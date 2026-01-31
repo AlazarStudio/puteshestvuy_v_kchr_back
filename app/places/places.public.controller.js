@@ -1,6 +1,30 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
 
+const DEFAULT_FILTERS = {
+  directions: ['Архыз', 'Домбай', 'Джылы-Суу', 'Медовые водопады'],
+  seasons: ['зима', 'весна', 'лето', 'осень'],
+  objectTypes: ['заповедник', 'горы', 'озера/реки', 'ледники', 'водопады', 'ущелья', 'пещеры'],
+  accessibility: ['только пешком', 'на машине'],
+}
+
+// @desc    Get place filters config (public, no auth) — для фильтра на сайте
+// @route   GET /api/places/filters
+export const getPlaceFiltersPublic = asyncHandler(async (req, res) => {
+  const config = await prisma.placeFilterConfig.findUnique({
+    where: { id: 'default' },
+  })
+  if (!config) {
+    return res.json(DEFAULT_FILTERS)
+  }
+  res.json({
+    directions: config.directions ?? [],
+    seasons: config.seasons ?? [],
+    objectTypes: config.objectTypes ?? [],
+    accessibility: config.accessibility ?? [],
+  })
+})
+
 // @desc    Get active places (public, no auth)
 // @route   GET /api/places
 export const getPlacesPublic = asyncHandler(async (req, res) => {
@@ -9,6 +33,12 @@ export const getPlacesPublic = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit
   const search = (req.query.search || '').trim()
   const byLocation = (req.query.byLocation || '').trim()
+
+  const arr = (v) => (v == null ? [] : Array.isArray(v) ? v : [v])
+  const directionsArr = arr(req.query.directions || req.query['directions[]']).filter(Boolean)
+  const seasonsArr = arr(req.query.seasons || req.query['seasons[]']).filter(Boolean)
+  const objectTypesArr = arr(req.query.objectTypes || req.query['objectTypes[]']).filter(Boolean)
+  const accessibilityArr = arr(req.query.accessibility || req.query['accessibility[]']).filter(Boolean)
 
   const where = { isActive: true }
   if (search) {
@@ -20,6 +50,18 @@ export const getPlacesPublic = asyncHandler(async (req, res) => {
   }
   if (byLocation) {
     where.location = { contains: byLocation, mode: 'insensitive' }
+  }
+  if (directionsArr.length) {
+    where.directions = { hasSome: directionsArr }
+  }
+  if (seasonsArr.length) {
+    where.seasons = { hasSome: seasonsArr }
+  }
+  if (objectTypesArr.length) {
+    where.objectTypes = { hasSome: objectTypesArr }
+  }
+  if (accessibilityArr.length) {
+    where.accessibility = { hasSome: accessibilityArr }
   }
 
   const [items, total] = await Promise.all([

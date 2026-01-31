@@ -51,6 +51,13 @@ import {
 
 import { getDashboardStats } from "./stats.controller.js"
 
+import {
+  getPlaceFilters,
+  updatePlaceFilters,
+  replaceFilterValue,
+  removeFilterValue,
+} from "./place-filters.controller.js"
+
 const router = express.Router()
 
 // Настройка multer для загрузки файлов
@@ -138,5 +145,11 @@ router.route("/reviews/:id")
 router.post("/media/upload", upload.single('file'), uploadFile)
 router.get("/media", getMedia)
 router.delete("/media/:id", deleteMedia)
+
+// Place filters (конфигурация фильтров мест)
+router.get("/place-filters", getPlaceFilters)
+router.put("/place-filters", updatePlaceFilters)
+router.post("/place-filters/replace-value", replaceFilterValue)
+router.post("/place-filters/remove-value", removeFilterValue)
 
 export default router
