@@ -2,6 +2,10 @@ import dotenv from "dotenv"
 import express from "express"
 import morgan from "morgan"
 import path from "path"
+import cors from "cors"
+
+import fs from "fs"
+import https from "https"
 
 import { errorHandler, notFound } from "./app/middleware/error.middleware.js"
 import { prisma } from "./app/prisma.js"
@@ -12,21 +16,20 @@ import adminRoutes from "./app/admin/admin.routes.js"
 import placesPublicRoutes from "./app/places/places.routes.js"
 import routesPublicRoutes from "./app/routes/routes.routes.js"
 
-import cors from "cors"
-
 dotenv.config()
 
 const app = express()
-
 app.use(cors())
 
-async function main() {
-  if (process.env.NODE_ENV === "development") app.use(morgan("dev"))
+const isDev = process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "development"
+const isProd = process.env.NODE_ENV === "production"
 
-  app.use(express.json({ limit: '10mb' }))
+async function main() {
+  if (isDev) app.use(morgan("dev"))
+
+  app.use(express.json({ limit: "10mb" }))
 
   const __dirname = path.resolve()
-
   app.use("/uploads", express.static(path.join(__dirname, "/uploads/")))
 
   app.use("/api/auth", authRoutes)
@@ -40,28 +43,44 @@ async function main() {
 
   const PORT = process.env.PORT || 5000
 
-  const server = app.listen(
-    PORT,
-    console.log(`Server running in ${process.env.NODE_ENV} on port ${PORT}`)
-  )
+  let server
+
+  if (isProd) {
+    // SSL only in prod
+    let sslOptions
+    try {
+      sslOptions = {
+        key: fs.readFileSync(process.env.SERVER_KEY),
+        cert: fs.readFileSync(process.env.SERVER_CERT),
+        ca: fs.readFileSync(process.env.SERVER_CA),
+      }
+    } catch (err) {
+      console.error("SSL files read error. Please check the paths in environment variables.")
+      throw err
+    }
+
+    server = https.createServer(sslOptions, app).listen(PORT, () => {
+      console.log(`HTTPS Server running in ${process.env.NODE_ENV} on port ${PORT}`)
+    })
+  } else {
+    // dev, etc → HTTP
+    server = app.listen(PORT, () => {
+      console.log(`HTTP Server running in ${process.env.NODE_ENV} on port ${PORT}`)
+    })
+  }
 
   // Graceful shutdown
-  process.on("SIGTERM", async () => {
-    console.log("SIGTERM signal received: closing HTTP server")
+  const shutdown = async (signal) => {
+    console.log(`${signal} signal received: closing server`)
     server.close(async () => {
       await prisma.$disconnect()
-      console.log("HTTP server closed")
-    })
-  })
-
-  process.on("SIGINT", async () => {
-    console.log("SIGINT signal received: closing HTTP server")
-    server.close(async () => {
-      await prisma.$disconnect()
-      console.log("HTTP server closed")
+      console.log("Server closed")
       process.exit(0)
     })
-  })
+  }
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"))
+  process.on("SIGINT", () => shutdown("SIGINT"))
 }
 
 main().catch(async (e) => {
