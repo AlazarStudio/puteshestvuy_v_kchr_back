@@ -68,6 +68,10 @@ export const getRoutesPublic = asyncHandler(async (req, res) => {
   const transportArr = arr(req.query.transport || req.query['transport[]']).filter(Boolean)
   const durationArr = arr(req.query.durationOptions || req.query['durationOptions[]']).filter(Boolean)
   const difficultyArr = arr(req.query.difficultyLevels || req.query['difficultyLevels[]']).filter(Boolean)
+  const distanceArr = arr(req.query.distanceOptions || req.query['distanceOptions[]']).filter(Boolean)
+  const elevationArr = arr(req.query.elevationOptions || req.query['elevationOptions[]']).filter(Boolean)
+  const isFamilyArr = arr(req.query.isFamilyOptions || req.query['isFamilyOptions[]']).filter(Boolean)
+  const hasOvernightArr = arr(req.query.hasOvernightOptions || req.query['hasOvernightOptions[]']).filter(Boolean)
 
   const where = { isActive: true }
   if (search) {
@@ -89,6 +93,37 @@ export const getRoutesPublic = asyncHandler(async (req, res) => {
   if (difficultyArr.length) {
     const nums = difficultyArr.map((d) => parseInt(d, 10)).filter((n) => Number.isFinite(n))
     if (nums.length) where.difficulty = { in: nums }
+  }
+  if (distanceArr.length) {
+    const distanceOr = []
+    for (const opt of distanceArr) {
+      const s = String(opt).trim()
+      if (s === 'до 10 км') distanceOr.push({ distance: { lte: 10 } })
+      else if (s === '10–50 км') distanceOr.push({ distance: { gte: 10, lte: 50 } })
+      else if (s === '50–100 км') distanceOr.push({ distance: { gte: 50, lte: 100 } })
+      else if (s === '100+ км') distanceOr.push({ distance: { gte: 100 } })
+    }
+    if (distanceOr.length) {
+      where.AND = (where.AND || []).concat([{ OR: distanceOr }])
+    }
+  }
+  if (elevationArr.length) {
+    const elevationOr = []
+    for (const opt of elevationArr) {
+      const s = String(opt).trim()
+      if (s === 'до 500 м') elevationOr.push({ elevationGain: { lte: 500 } })
+      else if (s === '500–1000 м') elevationOr.push({ elevationGain: { gte: 500, lte: 1000 } })
+      else if (s === '1000+ м') elevationOr.push({ elevationGain: { gte: 1000 } })
+    }
+    if (elevationOr.length) {
+      where.AND = (where.AND || []).concat([{ OR: elevationOr }])
+    }
+  }
+  if (isFamilyArr.length) {
+    where.isFamily = true
+  }
+  if (hasOvernightArr.length) {
+    where.hasOvernight = true
   }
 
   const orderBy = sortBy === 'difficulty' ? { difficulty: 'asc' } : { createdAt: 'desc' }
