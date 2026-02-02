@@ -4,6 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "backup": "node scripts/backup.js",
     "dev": "nodemon server.js",
     "prisma": "prisma",
     "create-admin": "node scripts/createAdmin.js"
