@@ -2,7 +2,7 @@ import {
   createBackup,
   restoreBackup,
   listBackups
-} from "./services/cron/backup.js"
+} from "./scripts/backup.js"
 import readline from "readline"
 
 // CLI интерфейс
@@ -88,3 +88,4 @@ showMenu()
 rl.prompt()
 
 rl.on("line", handleUserInput)
+
