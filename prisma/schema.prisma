@@ -198,7 +198,9 @@ model Service {
   images           String[]
   certificates     String[]
   prices           ServicePrice[]
+  data             Json?         // тип-специфичные данные (теги, секции, каталог и т.д.)
   reviews          Review[]
+  routeIds         String[]      @default([]) @map("route_ids") @db.ObjectId // для гидов: id маршрутов, в которых участвует
 
   @@map("services")
 }

@@ -78,5 +78,83 @@ export const getServiceByIdOrSlugPublic = asyncHandler(async (req, res) => {
     throw new Error("Услуга не найдена")
   }
 
-  res.json(service)
+  const routeIds = Array.isArray(service.routeIds) ? service.routeIds : []
+  let routes = []
+  if (service.category === "Гид" && routeIds.length > 0) {
+    routes = await prisma.route.findMany({
+      where: { id: { in: routeIds }, isActive: true },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        shortDescription: true,
+        images: true,
+        distance: true,
+        duration: true,
+        difficulty: true,
+        rating: true,
+        reviewsCount: true,
+      },
+    })
+    // Порядок как в routeIds
+    const byId = Object.fromEntries(routes.map((r) => [r.id, r]))
+    routes = routeIds.map((id) => byId[id]).filter(Boolean)
+  }
+
+  res.json({
+    ...service,
+    routeIds,
+    routes,
+  })
+})
+
+// @desc    Create review for service (public, no auth) — статус pending, модерация в админке
+// @route   POST /api/services/:serviceId/reviews
+export const createServiceReview = asyncHandler(async (req, res) => {
+  const { serviceId } = req.params
+  const { authorName, rating, text, authorAvatar } = req.body || {}
+
+  if (!authorName || !String(authorName).trim()) {
+    res.status(400)
+    throw new Error("Укажите имя")
+  }
+  const ratingNum = parseInt(rating, 10)
+  if (Number.isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+    res.status(400)
+    throw new Error("Рейтинг должен быть от 1 до 5")
+  }
+  if (!text || !String(text).trim()) {
+    res.status(400)
+    throw new Error("Напишите текст отзыва")
+  }
+
+  const isObjectId = /^[a-f\d]{24}$/i.test(serviceId)
+  const service = await prisma.service.findFirst({
+    where: isObjectId
+      ? { id: serviceId, isActive: true }
+      : { slug: serviceId, isActive: true },
+    select: { id: true, title: true },
+  })
+
+  if (!service) {
+    res.status(404)
+    throw new Error("Услуга не найдена")
+  }
+
+  const review = await prisma.review.create({
+    data: {
+      authorName: String(authorName).trim(),
+      authorAvatar:
+        authorAvatar && String(authorAvatar).trim() ? String(authorAvatar).trim() : null,
+      rating: ratingNum,
+      text: String(text).trim(),
+      status: "pending",
+      entityType: "service",
+      entityId: service.id,
+      entityTitle: service.title,
+      serviceId: service.id,
+    },
+  })
+
+  res.status(201).json(review)
 })

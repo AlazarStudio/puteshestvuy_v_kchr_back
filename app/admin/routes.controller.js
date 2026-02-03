@@ -165,6 +165,17 @@ export const createRoute = asyncHandler(async (req, res) => {
     include: { points: true },
   })
 
+  // Синхрон: добавляем id маршрута в routeIds у выбранных гидов
+  const guideIdsList = Array.isArray(guideIds) ? guideIds : []
+  if (guideIdsList.length > 0) {
+    await prisma.service.updateMany({
+      where: { id: { in: guideIdsList }, category: 'Гид' },
+      data: {
+        routeIds: { push: route.id },
+      },
+    })
+  }
+
   res.status(201).json(route)
 })
 
@@ -238,6 +249,35 @@ export const updateRoute = asyncHandler(async (req, res) => {
     include: { points: { orderBy: { order: 'asc' } } },
   })
 
+  // Синхрон гидов: у гидов из нового guideIds добавляем route.id в routeIds; у гидов, убранных из списка, — удаляем
+  const newGuideIds = Array.isArray(updateData.guideIds) ? updateData.guideIds : []
+  const oldGuideIds = Array.isArray(existing.guideIds) ? existing.guideIds : []
+  const toAdd = newGuideIds.filter((id) => !oldGuideIds.includes(id))
+  const toRemove = oldGuideIds.filter((id) => !newGuideIds.includes(id))
+  const routeId = req.params.id
+
+  if (toAdd.length > 0) {
+    await prisma.service.updateMany({
+      where: { id: { in: toAdd }, category: 'Гид' },
+      data: { routeIds: { push: routeId } },
+    })
+  }
+  if (toRemove.length > 0) {
+    for (const serviceId of toRemove) {
+      const svc = await prisma.service.findUnique({
+        where: { id: serviceId },
+        select: { routeIds: true },
+      })
+      if (svc && Array.isArray(svc.routeIds)) {
+        const next = svc.routeIds.filter((id) => id !== routeId)
+        await prisma.service.update({
+          where: { id: serviceId },
+          data: { routeIds: next },
+        })
+      }
+    }
+  }
+
   const normalized = {
     ...route,
     placeIds: Array.isArray(route.placeIds) ? route.placeIds : [],
@@ -261,9 +301,23 @@ export const deleteRoute = asyncHandler(async (req, res) => {
     throw new Error('Маршрут не найден')
   }
 
+  const routeId = req.params.id
   await prisma.route.delete({
-    where: { id: req.params.id },
+    where: { id: routeId },
   })
+
+  // Убираем id маршрута из routeIds у всех гидов
+  const guidesWithRoute = await prisma.service.findMany({
+    where: { category: 'Гид', routeIds: { hasSome: [routeId] } },
+    select: { id: true, routeIds: true },
+  })
+  for (const svc of guidesWithRoute) {
+    const next = (svc.routeIds || []).filter((id) => id !== routeId)
+    await prisma.service.update({
+      where: { id: svc.id },
+      data: { routeIds: next },
+    })
+  }
 
   res.json({ message: 'Маршрут удалён' })
 })

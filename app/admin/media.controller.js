@@ -1,26 +1,61 @@
 import asyncHandler from "express-async-handler"
+import sharp from "sharp"
 import { prisma } from "../prisma.js"
 import path from "path"
 import fs from "fs"
 
-// @desc    Upload file
+const uploadsDir = path.join(process.cwd(), "uploads")
+const WEBP_QUALITY = 85
+
+function uniqueFilename(ext) {
+  return `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`
+}
+
+// @desc    Upload image (конвертация в WebP, SVG сохраняется как есть)
 // @route   POST /api/admin/media/upload
 // @access  Admin
 export const uploadFile = asyncHandler(async (req, res) => {
-  if (!req.file) {
+  if (!req.file || !req.file.buffer) {
     res.status(400)
-    throw new Error('Файл не загружен')
+    throw new Error("Файл не загружен")
   }
 
-  const file = req.file
-  const url = `/uploads/${file.filename}`
+  const { buffer, mimetype } = req.file
+
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true })
+  }
+
+  let filename
+  let finalMimetype = mimetype
+  let size
+
+  // SVG sharp не конвертирует — сохраняем как есть
+  if (mimetype === "image/svg+xml") {
+    filename = uniqueFilename(".svg")
+    const filePath = path.join(uploadsDir, filename)
+    fs.writeFileSync(filePath, buffer)
+    size = buffer.length
+  } else {
+    // Остальные форматы → WebP
+    filename = uniqueFilename(".webp")
+    const filePath = path.join(uploadsDir, filename)
+    await sharp(buffer)
+      .webp({ quality: WEBP_QUALITY })
+      .toFile(filePath)
+    const stat = fs.statSync(filePath)
+    size = stat.size
+    finalMimetype = "image/webp"
+  }
+
+  const url = `/uploads/${filename}`
 
   const media = await prisma.media.create({
     data: {
-      filename: file.filename,
+      filename,
       url,
-      mimetype: file.mimetype,
-      size: file.size,
+      mimetype: finalMimetype,
+      size,
     },
   })
 

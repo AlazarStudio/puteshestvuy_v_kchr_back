@@ -101,6 +101,7 @@ export const createService = asyncHandler(async (req, res) => {
     images,
     certificates,
     prices,
+    data,
   } = req.body
 
   if (!title) {
@@ -126,6 +127,7 @@ export const createService = asyncHandler(async (req, res) => {
       images: images || [],
       certificates: certificates || [],
       prices: prices || [],
+      data: data != null && typeof data === 'object' ? data : undefined,
     },
   })
 
@@ -159,6 +161,7 @@ export const updateService = asyncHandler(async (req, res) => {
     images,
     certificates,
     prices,
+    data,
   } = req.body
 
   const slug = title !== existing.title 
@@ -182,6 +185,7 @@ export const updateService = asyncHandler(async (req, res) => {
       images: images || undefined,
       certificates: certificates || undefined,
       prices: prices || undefined,
+      data: data !== undefined ? (data != null && typeof data === 'object' ? data : null) : undefined,
     },
   })
 

@@ -1,6 +1,7 @@
 import express from "express"
 import multer from "multer"
 import path from "path"
+import fs from "fs"
 import { protect, admin } from "../middleware/auth.middleware.js"
 
 // Controllers
@@ -73,30 +74,32 @@ import {
 
 const router = express.Router()
 
-// Настройка multer для загрузки файлов
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/')
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, uniqueSuffix + path.extname(file.originalname))
-  },
-})
+// Все форматы изображений для конвертации в WebP (SVG сохраняется как есть)
+const imageMimeTypes = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/bmp',
+  'image/tiff',
+  'image/svg+xml',
+  'image/x-icon',
+  'image/avif',
+]
 
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'audio/mpeg', 'audio/mp3', 'video/mp4']
-  if (allowedTypes.includes(file.mimetype)) {
+const imageFileFilter = (req, file, cb) => {
+  if (imageMimeTypes.includes(file.mimetype)) {
     cb(null, true)
   } else {
-    cb(new Error('Недопустимый тип файла'), false)
+    cb(new Error('Недопустимый тип файла. Разрешены только изображения.'), false)
   }
 }
 
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+// Для загрузки изображений: буфер в память → в контроллере конвертация в WebP
+const uploadImage = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: imageFileFilter,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB до конвертации
 })
 
 // Все роуты защищены middleware protect и admin
@@ -154,8 +157,8 @@ router.route("/reviews/:id")
   .put(updateReview)
   .delete(deleteReview)
 
-// Media (файлы)
-router.post("/media/upload", upload.single('file'), uploadFile)
+// Media (изображения → конвертация в WebP)
+router.post("/media/upload", uploadImage.single('file'), uploadFile)
 router.get("/media", getMedia)
 router.delete("/media/:id", deleteMedia)
 
