@@ -191,6 +191,8 @@ model Service {
   email            String?
   telegram         String?
   address          String?
+  latitude         Float?   // широта для карты
+  longitude        Float?   // долгота для карты
   rating           Float?         @default(0)
   reviewsCount     Int            @default(0) @map("reviews_count")
   isVerified       Boolean        @default(false) @map("is_verified")

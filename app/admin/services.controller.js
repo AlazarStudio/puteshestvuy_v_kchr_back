@@ -96,6 +96,8 @@ export const createService = asyncHandler(async (req, res) => {
     email,
     telegram,
     address,
+    latitude,
+    longitude,
     isVerified,
     isActive,
     images,
@@ -122,6 +124,8 @@ export const createService = asyncHandler(async (req, res) => {
       email,
       telegram,
       address,
+      latitude: latitude != null ? Number(latitude) : null,
+      longitude: longitude != null ? Number(longitude) : null,
       isVerified: Boolean(isVerified),
       isActive: isActive !== false,
       images: images || [],
@@ -156,6 +160,8 @@ export const updateService = asyncHandler(async (req, res) => {
     email,
     telegram,
     address,
+    latitude,
+    longitude,
     isVerified,
     isActive,
     images,
@@ -168,25 +174,29 @@ export const updateService = asyncHandler(async (req, res) => {
     ? generateSlug(title) + '-' + Date.now() 
     : existing.slug
 
+  const updateData = {
+    title,
+    slug,
+    category,
+    shortDescription,
+    description,
+    phone,
+    email,
+    telegram,
+    address,
+    isVerified: isVerified !== undefined ? Boolean(isVerified) : undefined,
+    isActive: isActive !== undefined ? Boolean(isActive) : undefined,
+    images: images || undefined,
+    certificates: certificates || undefined,
+    prices: prices || undefined,
+    data: data !== undefined ? (data != null && typeof data === 'object' ? data : null) : undefined,
+  }
+  if (latitude !== undefined) updateData.latitude = latitude != null ? Number(latitude) : null
+  if (longitude !== undefined) updateData.longitude = longitude != null ? Number(longitude) : null
+
   const service = await prisma.service.update({
     where: { id: req.params.id },
-    data: {
-      title,
-      slug,
-      category,
-      shortDescription,
-      description,
-      phone,
-      email,
-      telegram,
-      address,
-      isVerified: isVerified !== undefined ? Boolean(isVerified) : undefined,
-      isActive: isActive !== undefined ? Boolean(isActive) : undefined,
-      images: images || undefined,
-      certificates: certificates || undefined,
-      prices: prices || undefined,
-      data: data !== undefined ? (data != null && typeof data === 'object' ? data : null) : undefined,
-    },
+    data: updateData,
   })
 
   res.json(service)
