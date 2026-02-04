@@ -31,7 +31,7 @@ export const getNews = asyncHandler(async (req, res) => {
     ? {
         OR: [
           { title: { contains: search, mode: 'insensitive' } },
-          { content: { contains: search, mode: 'insensitive' } },
+          { shortDescription: { contains: search, mode: 'insensitive' } },
         ],
       }
     : {}
@@ -49,7 +49,7 @@ export const getNews = asyncHandler(async (req, res) => {
   res.json({
     items: items.map(item => ({
       ...item,
-      image: item.images?.[0] || null,
+      image: item.image || item.preview || item.images?.[0] || null,
     })),
     pagination: {
       page,
@@ -82,12 +82,14 @@ export const getNewsById = asyncHandler(async (req, res) => {
 export const createNews = asyncHandler(async (req, res) => {
   const {
     title,
+    type,
     category,
     shortDescription,
-    content,
-    author,
+    preview,
+    image,
     publishedAt,
     isActive,
+    blocks,
     images,
   } = req.body
 
@@ -102,12 +104,14 @@ export const createNews = asyncHandler(async (req, res) => {
     data: {
       title,
       slug,
+      type: type || 'news',
       category,
       shortDescription,
-      content,
-      author,
+      preview: preview || null,
+      image: image || null,
       publishedAt: publishedAt ? new Date(publishedAt) : null,
       isActive: Boolean(isActive),
+      blocks: blocks || [],
       images: images || [],
     },
   })
@@ -115,7 +119,7 @@ export const createNews = asyncHandler(async (req, res) => {
   res.status(201).json(news)
 })
 
-// @desc    Update news
+// @desc    Update news (поддерживает частичное обновление, в т.ч. только isActive)
 // @route   PUT /api/admin/news/:id
 // @access  Admin
 export const updateNews = asyncHandler(async (req, res) => {
@@ -128,34 +132,27 @@ export const updateNews = asyncHandler(async (req, res) => {
     throw new Error('Новость не найдена')
   }
 
-  const {
-    title,
-    category,
-    shortDescription,
-    content,
-    author,
-    publishedAt,
-    isActive,
-    images,
-  } = req.body
+  const updateData = {}
 
-  const slug = title !== existing.title 
-    ? generateSlug(title) + '-' + Date.now() 
-    : existing.slug
+  if (req.body.title !== undefined) {
+    updateData.title = req.body.title
+    updateData.slug = req.body.title !== existing.title
+      ? generateSlug(req.body.title) + '-' + Date.now()
+      : existing.slug
+  }
+  if (req.body.type !== undefined) updateData.type = req.body.type
+  if (req.body.category !== undefined) updateData.category = req.body.category
+  if (req.body.shortDescription !== undefined) updateData.shortDescription = req.body.shortDescription
+  if (req.body.preview !== undefined) updateData.preview = req.body.preview
+  if (req.body.image !== undefined) updateData.image = req.body.image
+  if (req.body.publishedAt !== undefined) updateData.publishedAt = req.body.publishedAt ? new Date(req.body.publishedAt) : null
+  if (req.body.isActive !== undefined) updateData.isActive = Boolean(req.body.isActive)
+  if (req.body.blocks !== undefined) updateData.blocks = req.body.blocks
+  if (req.body.images !== undefined) updateData.images = req.body.images
 
   const news = await prisma.news.update({
     where: { id: req.params.id },
-    data: {
-      title,
-      slug,
-      category,
-      shortDescription,
-      content,
-      author,
-      publishedAt: publishedAt ? new Date(publishedAt) : null,
-      isActive: isActive !== undefined ? Boolean(isActive) : undefined,
-      images: images || undefined,
-    },
+    data: updateData,
   })
 
   res.json(news)

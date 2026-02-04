@@ -165,13 +165,15 @@ model News {
   updatedAt        DateTime @updatedAt @map("updated_at")
   title            String
   slug             String   @unique
+  type             String   @default("news") // news | article
   category         String?  // Новости, Маршруты, Гайды, События, Анонсы
-  shortDescription String?  @map("short_description")
-  content          String?
-  author           String?
+  shortDescription String?  @map("short_description") // превью для карточки
+  preview          String?  // превью с кропом (только для новостей)
+  image            String?  // главная картинка
   publishedAt      DateTime? @map("published_at")
   isActive         Boolean  @default(false) @map("is_active")
-  images           String[]
+  blocks           Json?    // [{ id, type, order, data }] heading|text|image|gallery|quote|video
+  images           String[] // legacy, для обратной совместимости
 
   @@map("news")
 }

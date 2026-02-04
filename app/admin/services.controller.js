@@ -138,7 +138,7 @@ export const createService = asyncHandler(async (req, res) => {
   res.status(201).json(service)
 })
 
-// @desc    Update service
+// @desc    Update service (поддерживает частичное обновление, в т.ч. только isActive)
 // @route   PUT /api/admin/services/:id
 // @access  Admin
 export const updateService = asyncHandler(async (req, res) => {
@@ -151,48 +151,29 @@ export const updateService = asyncHandler(async (req, res) => {
     throw new Error('Услуга не найдена')
   }
 
-  const {
-    title,
-    category,
-    shortDescription,
-    description,
-    phone,
-    email,
-    telegram,
-    address,
-    latitude,
-    longitude,
-    isVerified,
-    isActive,
-    images,
-    certificates,
-    prices,
-    data,
-  } = req.body
+  const updateData = {}
 
-  const slug = title !== existing.title 
-    ? generateSlug(title) + '-' + Date.now() 
-    : existing.slug
-
-  const updateData = {
-    title,
-    slug,
-    category,
-    shortDescription,
-    description,
-    phone,
-    email,
-    telegram,
-    address,
-    isVerified: isVerified !== undefined ? Boolean(isVerified) : undefined,
-    isActive: isActive !== undefined ? Boolean(isActive) : undefined,
-    images: images || undefined,
-    certificates: certificates || undefined,
-    prices: prices || undefined,
-    data: data !== undefined ? (data != null && typeof data === 'object' ? data : null) : undefined,
+  if (req.body.title !== undefined) {
+    updateData.title = req.body.title
+    updateData.slug = req.body.title !== existing.title
+      ? generateSlug(req.body.title) + '-' + Date.now()
+      : existing.slug
   }
-  if (latitude !== undefined) updateData.latitude = latitude != null ? Number(latitude) : null
-  if (longitude !== undefined) updateData.longitude = longitude != null ? Number(longitude) : null
+  if (req.body.category !== undefined) updateData.category = req.body.category
+  if (req.body.shortDescription !== undefined) updateData.shortDescription = req.body.shortDescription
+  if (req.body.description !== undefined) updateData.description = req.body.description
+  if (req.body.phone !== undefined) updateData.phone = req.body.phone
+  if (req.body.email !== undefined) updateData.email = req.body.email
+  if (req.body.telegram !== undefined) updateData.telegram = req.body.telegram
+  if (req.body.address !== undefined) updateData.address = req.body.address
+  if (req.body.latitude !== undefined) updateData.latitude = req.body.latitude != null ? Number(req.body.latitude) : null
+  if (req.body.longitude !== undefined) updateData.longitude = req.body.longitude != null ? Number(req.body.longitude) : null
+  if (req.body.isVerified !== undefined) updateData.isVerified = Boolean(req.body.isVerified)
+  if (req.body.isActive !== undefined) updateData.isActive = Boolean(req.body.isActive)
+  if (req.body.images !== undefined) updateData.images = req.body.images
+  if (req.body.certificates !== undefined) updateData.certificates = req.body.certificates
+  if (req.body.prices !== undefined) updateData.prices = req.body.prices
+  if (req.body.data !== undefined) updateData.data = req.body.data != null && typeof req.body.data === 'object' ? req.body.data : null
 
   const service = await prisma.service.update({
     where: { id: req.params.id },
