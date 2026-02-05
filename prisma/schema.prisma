@@ -246,6 +246,15 @@ model Review {
   @@map("reviews")
 }
 
+// =============== РЕГИОН (страница «О регионе») ===============
+
+model Region {
+  id        String   @id @default("default") @map("_id")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  content   Json?    // hero, intro, facts, history, nature, culture, places, cta
+  @@map("region")
+}
+
 // =============== МЕДИА ===============
 
 model Media {

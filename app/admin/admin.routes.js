@@ -72,6 +72,8 @@ import {
   removeRouteFilterValue,
 } from "./route-filters.controller.js"
 
+import { getRegion, updateRegion } from "./region.controller.js"
+
 const router = express.Router()
 
 // Все форматы изображений для конвертации в WebP (SVG сохраняется как есть)
@@ -170,6 +172,10 @@ router.post("/place-filters/remove-group", removePlaceFilterGroup)
 router.patch("/place-filters/group-meta", updatePlaceFilterGroupMeta)
 router.post("/place-filters/replace-value", replaceFilterValue)
 router.post("/place-filters/remove-value", removeFilterValue)
+
+// Region (страница «О регионе»)
+router.get("/region", getRegion)
+router.put("/region", updateRegion)
 
 // Route filters (конфигурация фильтров маршрутов)
 router.get("/route-filters", getRouteFilters)
