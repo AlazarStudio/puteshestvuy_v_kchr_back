@@ -64,6 +64,13 @@ export const sendFeedback = asyncHandler(async (req, res) => {
     `,
   }
 
-  await transporter.sendMail(mailOptions)
-  res.json({ success: true })
+  try {
+    await transporter.sendMail(mailOptions)
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Ошибка отправки письма:', err.message)
+    res.status(500).json({
+      message: err.message || 'Не удалось отправить письмо. Проверьте настройки SMTP в .env',
+    })
+  }
 })
