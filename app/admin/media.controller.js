@@ -66,6 +66,45 @@ export const uploadFile = asyncHandler(async (req, res) => {
   })
 })
 
+const DOC_EXT = {
+  'application/pdf': '.pdf',
+  'application/msword': '.doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+}
+
+// @desc    Upload document (PDF, DOC, DOCX — без конвертации)
+// @route   POST /api/admin/media/upload-document
+// @access  Admin
+export const uploadDocument = asyncHandler(async (req, res) => {
+  if (!req.file || !req.file.buffer) {
+    res.status(400)
+    throw new Error("Файл не загружен")
+  }
+
+  const { buffer, mimetype, originalname } = req.file
+  const ext = DOC_EXT[mimetype] || path.extname(originalname || '') || '.bin'
+
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true })
+  }
+
+  const filename = uniqueFilename(ext)
+  const filePath = path.join(uploadsDir, filename)
+  fs.writeFileSync(filePath, buffer)
+  const size = buffer.length
+  const url = `/uploads/${filename}`
+
+  const media = await prisma.media.create({
+    data: { filename, url, mimetype, size },
+  })
+
+  res.status(201).json({
+    id: media.id,
+    url,
+    filename: media.filename,
+  })
+})
+
 // @desc    Get all media files
 // @route   GET /api/admin/media
 // @access  Admin

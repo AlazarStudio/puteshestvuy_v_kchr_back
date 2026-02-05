@@ -24,6 +24,13 @@ NODE_ENV=development
 PORT=5000
 DATABASE_URL="postgresql://user:password@localhost:5432/dbname?schema=public"
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+
+# SMTP для формы обратной связи (футер)
+SMTP_HOST=smtp.mail.ru
+SMTP_PORT=587
+SMTP_USER=your-email@mail.ru
+SMTP_PASS=your-app-password
+SMTP_FROM=your-email@mail.ru
 ```
 
 4. Настройте базу данных:

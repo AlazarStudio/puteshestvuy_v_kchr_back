@@ -46,6 +46,7 @@ import {
 
 import {
   uploadFile,
+  uploadDocument,
   getMedia,
   deleteMedia,
 } from "./media.controller.js"
@@ -73,6 +74,7 @@ import {
 } from "./route-filters.controller.js"
 
 import { getRegion, updateRegion } from "./region.controller.js"
+import { getFooter, updateFooter } from "./footer.controller.js"
 
 const router = express.Router()
 
@@ -102,6 +104,24 @@ const uploadImage = multer({
   storage: multer.memoryStorage(),
   fileFilter: imageFileFilter,
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB до конвертации
+})
+
+const docMimeTypes = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]
+const docFileFilter = (req, file, cb) => {
+  if (docMimeTypes.includes(file.mimetype)) {
+    cb(null, true)
+  } else {
+    cb(new Error('Разрешены только PDF, DOC, DOCX'), false)
+  }
+}
+const uploadDoc = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: docFileFilter,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
 })
 
 // Все роуты защищены middleware protect и admin
@@ -161,6 +181,7 @@ router.route("/reviews/:id")
 
 // Media (изображения → конвертация в WebP)
 router.post("/media/upload", uploadImage.single('file'), uploadFile)
+router.post("/media/upload-document", uploadDoc.single('file'), uploadDocument)
 router.get("/media", getMedia)
 router.delete("/media/:id", deleteMedia)
 
@@ -176,6 +197,10 @@ router.post("/place-filters/remove-value", removeFilterValue)
 // Region (страница «О регионе»)
 router.get("/region", getRegion)
 router.put("/region", updateRegion)
+
+// Footer
+router.get("/footer", getFooter)
+router.put("/footer", updateFooter)
 
 // Route filters (конфигурация фильтров маршрутов)
 router.get("/route-filters", getRouteFilters)

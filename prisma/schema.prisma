@@ -255,6 +255,13 @@ model Region {
   @@map("region")
 }
 
+model Footer {
+  id        String   @id @default("default") @map("_id")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  content   Json?    // left, center, right, bottom
+  @@map("footer")
+}
+
 // =============== МЕДИА ===============
 
 model Media {
