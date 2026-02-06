@@ -3,7 +3,6 @@ import sharp from "sharp"
 import { prisma } from "../prisma.js"
 import path from "path"
 import fs from "fs"
-
 const uploadsDir = path.join(process.cwd(), "uploads")
 const WEBP_QUALITY = 85
 
@@ -103,6 +102,36 @@ export const uploadDocument = asyncHandler(async (req, res) => {
     url,
     filename: media.filename,
   })
+})
+
+// @desc    Upload video (сохраняется как есть, без конвертации)
+// @route   POST /api/admin/media/upload-video
+// @access  Admin
+export const uploadVideo = asyncHandler(async (req, res) => {
+  if (!req.file || !req.file.buffer) {
+    res.status(400)
+    throw new Error("Видеофайл не загружен")
+  }
+
+  const { buffer, mimetype, originalname } = req.file
+  const ext = path.extname(originalname || "") || ".mp4"
+  const safeExt = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"].includes(ext.toLowerCase()) ? ext : ".mp4"
+
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true })
+  }
+
+  const filename = uniqueFilename(safeExt)
+  const filePath = path.join(uploadsDir, filename)
+  fs.writeFileSync(filePath, buffer)
+  const size = buffer.length
+  const url = `/uploads/${filename}`
+
+  await prisma.media.create({
+    data: { filename, url, mimetype, size },
+  })
+
+  res.status(201).json({ url, filename })
 })
 
 // @desc    Get all media files

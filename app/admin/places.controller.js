@@ -144,6 +144,7 @@ export const createPlace = asyncHandler(async (req, res) => {
     video,
     isActive,
     image,
+    sliderVideo,
     images,
     directions,
     seasons,
@@ -175,6 +176,7 @@ export const createPlace = asyncHandler(async (req, res) => {
       video,
       isActive: isActive !== false,
       image: image || null,
+      sliderVideo: sliderVideo || null,
       images: images || [],
       directions: Array.isArray(directions) ? directions : [],
       seasons: Array.isArray(seasons) ? seasons : [],
@@ -215,6 +217,7 @@ export const updatePlace = asyncHandler(async (req, res) => {
     video,
     isActive,
     image,
+    sliderVideo,
     images,
     directions,
     seasons,
@@ -239,6 +242,7 @@ export const updatePlace = asyncHandler(async (req, res) => {
   if (video !== undefined) data.video = video
   if (isActive !== undefined) data.isActive = Boolean(isActive)
   if (image !== undefined) data.image = image || null
+  if (sliderVideo !== undefined) data.sliderVideo = sliderVideo || null
   if (images !== undefined) data.images = images
   if (directions !== undefined) data.directions = Array.isArray(directions) ? directions : []
   if (seasons !== undefined) data.seasons = Array.isArray(seasons) ? seasons : []

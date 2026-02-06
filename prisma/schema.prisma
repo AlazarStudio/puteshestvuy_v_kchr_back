@@ -130,6 +130,7 @@ model Place {
   reviewsCount      Int      @default(0) @map("reviews_count")
   isActive          Boolean  @default(true) @map("is_active")
   image             String?  // превью (обложка), одна картинка с кропом
+  sliderVideo       String?  @map("slider_video") // видео для главного слайдера (WebM)
   images            String[] // фотогалерея
   directions        String[] // Направление: Архыз, Домбай, Джылы-Суу, Медовые водопады
   seasons           String[] // Сезон: зима, весна, лето, осень

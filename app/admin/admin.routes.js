@@ -47,6 +47,7 @@ import {
 import {
   uploadFile,
   uploadDocument,
+  uploadVideo,
   getMedia,
   deleteMedia,
 } from "./media.controller.js"
@@ -124,6 +125,26 @@ const uploadDoc = multer({
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
 })
 
+const videoMimeTypes = [
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'video/x-msvideo',
+  'video/x-matroska',
+]
+const videoFileFilter = (req, file, cb) => {
+  if (videoMimeTypes.includes(file.mimetype)) {
+    cb(null, true)
+  } else {
+    cb(new Error('Разрешены только видеофайлы: MP4, WebM, MOV, AVI, MKV'), false)
+  }
+}
+const uploadVideoFile = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: videoFileFilter,
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB
+})
+
 // Все роуты защищены middleware protect и admin
 router.use(protect, admin)
 
@@ -182,6 +203,7 @@ router.route("/reviews/:id")
 // Media (изображения → конвертация в WebP)
 router.post("/media/upload", uploadImage.single('file'), uploadFile)
 router.post("/media/upload-document", uploadDoc.single('file'), uploadDocument)
+router.post("/media/upload-video", uploadVideoFile.single('file'), uploadVideo)
 router.get("/media", getMedia)
 router.delete("/media/:id", deleteMedia)
 
