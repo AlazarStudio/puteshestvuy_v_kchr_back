@@ -36,12 +36,27 @@ export const getNews = asyncHandler(async (req, res) => {
       }
     : {}
 
+  // Обработка сортировки
+  const sortBy = req.query.sortBy || 'createdAt'
+  const sortOrder = req.query.sortOrder === 'asc' ? 'asc' : 'desc'
+  
+  // Маппинг полей для сортировки
+  const sortFieldMap = {
+    title: 'title',
+    category: 'category', // В модели News есть поле category
+    createdAt: 'createdAt',
+    isActive: 'isActive',
+  }
+  
+  const orderByField = sortFieldMap[sortBy] || 'createdAt'
+  const orderBy = { [orderByField]: sortOrder }
+
   const [items, total] = await Promise.all([
     prisma.news.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
     }),
     prisma.news.count({ where }),
   ])

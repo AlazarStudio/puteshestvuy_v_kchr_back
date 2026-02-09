@@ -15,12 +15,32 @@ export const getReviews = asyncHandler(async (req, res) => {
   if (status) where.status = status
   if (entityType && ['route', 'place', 'service'].includes(entityType)) where.entityType = entityType
 
-  const [items, total] = await Promise.all([
-    prisma.review.findMany({
+  // Обработка сортировки
+  const sortBy = req.query.sortBy || 'createdAt'
+  const sortOrder = req.query.sortOrder === 'asc' ? 'asc' : 'desc'
+  
+  // Для authorName и entityTitle нужна сортировка после получения данных
+  const needsPostSort = sortBy === 'authorName' || sortBy === 'entityTitle'
+  
+  let orderBy = { createdAt: 'desc' }
+  
+  if (!needsPostSort) {
+    const sortFieldMap = {
+      entityType: 'entityType',
+      rating: 'rating',
+      createdAt: 'createdAt',
+      status: 'status',
+    }
+    const orderByField = sortFieldMap[sortBy] || 'createdAt'
+    orderBy = { [orderByField]: sortOrder }
+  }
+
+  // Если нужна пост-сортировка, получаем все данные, сортируем и применяем пагинацию
+  let items, total
+  
+  if (needsPostSort) {
+    const allItems = await prisma.review.findMany({
       where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
       include: {
         user: {
           select: {
@@ -30,9 +50,50 @@ export const getReviews = asyncHandler(async (req, res) => {
           },
         },
       },
-    }),
-    prisma.review.count({ where }),
-  ])
+    })
+    
+    total = allItems.length
+    
+    // Сортировка в JavaScript
+    allItems.sort((a, b) => {
+      let aVal, bVal
+      if (sortBy === 'authorName') {
+        aVal = a.user?.name || ''
+        bVal = b.user?.name || ''
+      } else if (sortBy === 'entityTitle') {
+        // Для entityTitle используем entityId как fallback, так как title в других таблицах
+        aVal = a.entityId || ''
+        bVal = b.entityId || ''
+      }
+      
+      const comparison = aVal.localeCompare(bVal, 'ru', { sensitivity: 'base' })
+      return sortOrder === 'asc' ? comparison : -comparison
+    })
+    
+    // Применяем пагинацию
+    items = allItems.slice(skip, skip + limit)
+  } else {
+    const result = await Promise.all([
+      prisma.review.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      }),
+      prisma.review.count({ where }),
+    ])
+    items = result[0]
+    total = result[1]
+  }
 
   res.json({
     items,

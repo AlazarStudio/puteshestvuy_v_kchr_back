@@ -37,12 +37,28 @@ export const getServices = asyncHandler(async (req, res) => {
       }
     : {}
 
+  // Обработка сортировки
+  const sortBy = req.query.sortBy || 'createdAt'
+  const sortOrder = req.query.sortOrder === 'asc' ? 'asc' : 'desc'
+  
+  // Маппинг полей для сортировки
+  const sortFieldMap = {
+    title: 'title',
+    category: 'category',
+    rating: 'rating',
+    isActive: 'isActive',
+    createdAt: 'createdAt',
+  }
+  
+  const orderByField = sortFieldMap[sortBy] || 'createdAt'
+  const orderBy = { [orderByField]: sortOrder }
+
   const [items, total] = await Promise.all([
     prisma.service.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
     }),
     prisma.service.count({ where }),
   ])

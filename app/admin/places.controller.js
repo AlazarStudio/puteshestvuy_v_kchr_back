@@ -40,12 +40,28 @@ export const getPlaces = asyncHandler(async (req, res) => {
     where.location = { contains: byLocation, mode: 'insensitive' }
   }
 
+  // Обработка сортировки
+  const sortBy = req.query.sortBy || 'createdAt'
+  const sortOrder = req.query.sortOrder === 'asc' ? 'asc' : 'desc'
+  
+  // Маппинг полей для сортировки
+  const sortFieldMap = {
+    title: 'title',
+    location: 'location',
+    rating: 'rating',
+    isActive: 'isActive',
+    createdAt: 'createdAt',
+  }
+  
+  const orderByField = sortFieldMap[sortBy] || 'createdAt'
+  const orderBy = { [orderByField]: sortOrder }
+
   const [items, total] = await Promise.all([
     prisma.place.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
     }),
     prisma.place.count({ where }),
   ])
