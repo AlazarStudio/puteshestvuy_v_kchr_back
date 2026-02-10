@@ -141,6 +141,7 @@ export const getPlaceByIdOrSlugPublic = asyncHandler(async (req, res) => {
 
   const safePlace = {
     ...place,
+    image: place.image || place.images?.[0] || null,
     nearbyPlaceIds,
     nearbyPlaces: nearbyPlaces.map((p) => ({
       ...p,

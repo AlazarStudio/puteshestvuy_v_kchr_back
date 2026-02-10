@@ -33,16 +33,12 @@ export const authUser = asyncHandler(async (req, res) => {
 
   if (isValidPassword) {
     const token = generateToken(user.id)
+    const userWithFields = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: UserFields
+    })
     res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        login: user.login,
-        name: user.name,
-        role: user.role,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      },
+      user: userWithFields,
       token
     })
   } else {
@@ -100,6 +96,7 @@ export const registerUser = asyncHandler(async (req, res) => {
   })
 
   const token = generateToken(user.id)
+  console.log("[auth] New user registered:", user.id, user.login, user.email)
 
   res.status(201).json({ user, token })
 })
