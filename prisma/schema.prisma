@@ -39,9 +39,11 @@ model User {
   avatar             String?
   userInformation    UserInformation?
   reviews            Review[]
-  favoriteRouteIds   String[]         @default([]) @map("favorite_route_ids") @db.ObjectId
-  favoritePlaceIds   String[]         @default([]) @map("favorite_place_ids") @db.ObjectId
-  favoriteServiceIds String[]         @default([]) @map("favorite_service_ids") @db.ObjectId
+  favoriteRouteIds    String[]         @default([]) @map("favorite_route_ids") @db.ObjectId
+  favoritePlaceIds    String[]         @default([]) @map("favorite_place_ids") @db.ObjectId
+  favoriteServiceIds  String[]         @default([]) @map("favorite_service_ids") @db.ObjectId
+  constructorPlaceIds String[]         @default([]) @map("constructor_place_ids") @db.ObjectId
+  userRoutes          UserRoute[]
 }
 
 // =============== МАРШРУТЫ ===============
@@ -278,4 +280,21 @@ model Media {
   size      Int
 
   @@map("media")
+}
+
+// =============== ПОЛЬЗОВАТЕЛЬСКИЕ МАРШРУТЫ ===============
+
+model UserRoute {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  userId      String   @db.ObjectId @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  placeIds    String[] @db.ObjectId @map("place_ids")
+  notes       String?
+  isActive    Boolean  @default(true) @map("is_active")
+
+  @@map("user_routes")
 }

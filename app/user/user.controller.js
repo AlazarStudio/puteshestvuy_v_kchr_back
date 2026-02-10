@@ -171,6 +171,34 @@ export const getFavorites = asyncHandler(async (req, res) => {
   res.json(user || { favoriteRouteIds: [], favoritePlaceIds: [], favoriteServiceIds: [] })
 })
 
+// @desc    Get constructor place IDs
+// @route   GET /api/users/constructor-points
+// @access  Private
+export const getConstructorPoints = asyncHandler(async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { constructorPlaceIds: true }
+  })
+  const placeIds = Array.isArray(user?.constructorPlaceIds) ? user.constructorPlaceIds : []
+  res.json({ placeIds })
+})
+
+// @desc    Update constructor place IDs
+// @route   PUT /api/users/constructor-points
+// @access  Private
+export const updateConstructorPoints = asyncHandler(async (req, res) => {
+  const placeIds = Array.isArray(req.body?.placeIds)
+    ? req.body.placeIds.filter((id) => typeof id === "string" && id)
+    : []
+
+  await prisma.user.update({
+    where: { id: req.user.id },
+    data: { constructorPlaceIds: placeIds }
+  })
+
+  res.json({ placeIds })
+})
+
 // @desc    Add to favorites
 // @route   POST /api/users/favorites/:entityType/:entityId
 // @access  Private
@@ -249,4 +277,141 @@ export const removeFavorite = asyncHandler(async (req, res) => {
     select: UserFields
   })
   res.json(updated)
+})
+
+// =============== ПОЛЬЗОВАТЕЛЬСКИЕ МАРШРУТЫ ===============
+
+// @desc    Get all user routes for current user
+// @route   GET /api/users/routes
+// @access  Private
+export const getUserRoutes = asyncHandler(async (req, res) => {
+  const routes = await prisma.userRoute.findMany({
+    where: { userId: req.user.id },
+    orderBy: { createdAt: "desc" }
+  })
+  res.json(routes)
+})
+
+// @desc    Get single user route
+// @route   GET /api/users/routes/:id
+// @access  Private
+export const getUserRouteById = asyncHandler(async (req, res) => {
+  const route = await prisma.userRoute.findFirst({
+    where: {
+      id: req.params.id,
+      userId: req.user.id
+    }
+  })
+
+  if (!route) {
+    res.status(404)
+    throw new Error("Маршрут не найден")
+  }
+
+  res.json(route)
+})
+
+// @desc    Create new user route
+// @route   POST /api/users/routes
+// @access  Private
+export const createUserRoute = asyncHandler(async (req, res) => {
+  const { title, description, placeIds, notes, isActive } = req.body
+
+  if (!title || typeof title !== "string" || !title.trim()) {
+    res.status(400)
+    throw new Error("Название маршрута обязательно")
+  }
+
+  const placeIdsArray = Array.isArray(placeIds) ? placeIds.filter(Boolean) : []
+
+  const route = await prisma.userRoute.create({
+    data: {
+      userId: req.user.id,
+      title: title.trim(),
+      description: description || null,
+      placeIds: placeIdsArray,
+      notes: notes || null,
+      isActive: typeof isActive === "boolean" ? isActive : true
+    }
+  })
+
+  res.status(201).json(route)
+})
+
+// @desc    Update user route
+// @route   PUT /api/users/routes/:id
+// @access  Private
+export const updateUserRoute = asyncHandler(async (req, res) => {
+  const { id } = req.params
+  const { title, description, placeIds, notes, isActive } = req.body
+
+  const existing = await prisma.userRoute.findFirst({
+    where: {
+      id,
+      userId: req.user.id
+    }
+  })
+
+  if (!existing) {
+    res.status(404)
+    throw new Error("Маршрут не найден")
+  }
+
+  const data = {}
+
+  if (typeof title !== "undefined") {
+    if (!title || typeof title !== "string" || !title.trim()) {
+      res.status(400)
+      throw new Error("Название маршрута обязательно")
+    }
+    data.title = title.trim()
+  }
+
+  if (typeof description !== "undefined") {
+    data.description = description || null
+  }
+
+  if (typeof placeIds !== "undefined") {
+    data.placeIds = Array.isArray(placeIds) ? placeIds.filter(Boolean) : []
+  }
+
+  if (typeof notes !== "undefined") {
+    data.notes = notes || null
+  }
+
+  if (typeof isActive !== "undefined") {
+    data.isActive = !!isActive
+  }
+
+  const updated = await prisma.userRoute.update({
+    where: { id: existing.id },
+    data
+  })
+
+  res.json(updated)
+})
+
+// @desc    Delete user route
+// @route   DELETE /api/users/routes/:id
+// @access  Private
+export const deleteUserRoute = asyncHandler(async (req, res) => {
+  const { id } = req.params
+
+  const existing = await prisma.userRoute.findFirst({
+    where: {
+      id,
+      userId: req.user.id
+    }
+  })
+
+  if (!existing) {
+    res.status(404)
+    throw new Error("Маршрут не найден")
+  }
+
+  await prisma.userRoute.delete({
+    where: { id: existing.id }
+  })
+
+  res.json({ success: true })
 })
