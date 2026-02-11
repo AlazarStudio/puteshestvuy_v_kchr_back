@@ -28,17 +28,17 @@ type UserInformation {
 }
 
 model User {
-  id                 String           @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt          DateTime         @default(now()) @map("created_at")
-  updatedAt          DateTime         @updatedAt @map("updated_at")
-  email              String           @unique
-  login              String           @unique
-  name               String
-  password           String
-  role               Role             @default(USER)
-  avatar             String?
-  userInformation    UserInformation?
-  reviews            Review[]
+  id                  String           @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  email               String           @unique
+  login               String           @unique
+  name                String
+  password            String
+  role                Role             @default(USER)
+  avatar              String?
+  userInformation     UserInformation?
+  reviews             Review[]
   favoriteRouteIds    String[]         @default([]) @map("favorite_route_ids") @db.ObjectId
   favoritePlaceIds    String[]         @default([]) @map("favorite_place_ids") @db.ObjectId
   favoriteServiceIds  String[]         @default([]) @map("favorite_service_ids") @db.ObjectId
@@ -56,11 +56,11 @@ model Route {
   slug             String       @unique
   shortDescription String?      @map("short_description")
   description      String?
-  season           String?      // Зима, Весна, Лето, Осень
-  distance         Float?       // км
-  duration         String?      // 3ч 30м
+  season           String? // Зима, Весна, Лето, Осень
+  distance         Float? // км
+  duration         String? // 3ч 30м
   difficulty       Int?         @default(3) // 1-5
-  transport        String?      // Пешком, Верхом, Автомобиль, Квадроцикл
+  transport        String? // Пешком, Верхом, Автомобиль, Квадроцикл
   isFamily         Boolean      @default(false) @map("is_family")
   hasOvernight     Boolean      @default(false) @map("has_overnight")
   elevationGain    Float?       @map("elevation_gain") // перепад высот
@@ -71,13 +71,13 @@ model Route {
   rating           Float?       @default(0)
   reviewsCount     Int          @default(0) @map("reviews_count")
   uniqueViewsCount Int          @default(0) @map("unique_views_count")
-  images           String[]     // массив URL изображений
+  images           String[] // массив URL изображений
   points           RoutePoint[]
   reviews          Review[]
-  placeIds         String[]     @db.ObjectId @map("place_ids")
-  nearbyPlaceIds   String[]     @db.ObjectId @map("nearby_place_ids") // места рядом (локация совпадает с локациями мест маршрута)
-  guideIds         String[]     @db.ObjectId @map("guide_ids") // гиды (services с category Гид)
-  similarRouteIds  String[]     @db.ObjectId @map("similar_route_ids") // похожие маршруты (чем больше общих мест — тем похожее)
+  placeIds         String[]     @map("place_ids") @db.ObjectId
+  nearbyPlaceIds   String[]     @map("nearby_place_ids") @db.ObjectId // места рядом (локация совпадает с локациями мест маршрута)
+  guideIds         String[]     @map("guide_ids") @db.ObjectId // гиды (services с category Гид)
+  similarRouteIds  String[]     @map("similar_route_ids") @db.ObjectId // похожие маршруты (чем больше общих мест — тем похожее)
   customFilters    Json?        @map("custom_filters") // значения дополнительных групп фильтров { "key": ["v1"] }
 
   @@map("routes")
@@ -91,7 +91,7 @@ model RoutePoint {
   description String?
   image       String?
   order       Int      @default(0)
-  routeId     String   @db.ObjectId @map("route_id")
+  routeId     String   @map("route_id") @db.ObjectId
   route       Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
 
   @@map("route_points")
@@ -99,19 +99,19 @@ model RoutePoint {
 
 // Конфигурация фильтров маршрутов (группы и значения для сайта и формы маршрута)
 model RouteFilterConfig {
-  id                 String   @id @default("default") @map("_id")
-  seasons            String[]
-  transport          String[]
-  durationOptions    String[] @map("duration_options")     // Время прохождения: 2 дня, 3ч 30м
-  difficultyLevels   String[] @map("difficulty_levels")     // Сложность: 1, 2, 3, 4, 5
-  distanceOptions    String[] @map("distance_options")     // Расстояние: до 10 км, 10–50 км
-  elevationOptions   String[] @map("elevation_options")      // Перепад высот: до 500 м, 500–1000 м
-  isFamilyOptions    String[] @map("is_family_options")     // Семейный маршрут: Да
+  id                  String   @id @default("default") @map("_id")
+  seasons             String[]
+  transport           String[]
+  durationOptions     String[] @map("duration_options") // Время прохождения: 2 дня, 3ч 30м
+  difficultyLevels    String[] @map("difficulty_levels") // Сложность: 1, 2, 3, 4, 5
+  distanceOptions     String[] @map("distance_options") // Расстояние: до 10 км, 10–50 км
+  elevationOptions    String[] @map("elevation_options") // Перепад высот: до 500 м, 500–1000 м
+  isFamilyOptions     String[] @map("is_family_options") // Семейный маршрут: Да
   hasOvernightOptions String[] @map("has_overnight_options") // С ночевкой: Да
-  extraGroups        Json?    @map("extra_groups")          // [{ key, label, icon?, iconType?, values }]
-  fixedGroupMeta     Json?    @map("fixed_group_meta")       // { "seasons": { label?, icon?, iconType? }, ... }
-  hiddenFixedGroups  Json?    @map("hidden_fixed_groups")   // ["seasons", ...] — скрытые встроенные группы
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  extraGroups         Json?    @map("extra_groups") // [{ key, label, icon?, iconType?, values }]
+  fixedGroupMeta      Json?    @map("fixed_group_meta") // { "seasons": { label?, icon?, iconType? }, ... }
+  hiddenFixedGroups   Json?    @map("hidden_fixed_groups") // ["seasons", ...] — скрытые встроенные группы
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   @@map("route_filter_config")
 }
@@ -119,50 +119,50 @@ model RouteFilterConfig {
 // =============== МЕСТА ===============
 
 model Place {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  title             String
-  slug              String   @unique
-  location          String?
-  latitude          Float?   // широта для карты
-  longitude         Float?   // долгота для карты
-  shortDescription  String?  @map("short_description")
-  description       String?
-  howToGet          String?  @map("how_to_get")
-  importantInfo     String?  @map("important_info")
-  mapUrl            String?  @map("map_url")
-  audioGuide        String?  @map("audio_guide")
-  video             String?
-  rating            Float?   @default(0)
-  reviewsCount      Int      @default(0) @map("reviews_count")
-  uniqueViewsCount  Int      @default(0) @map("unique_views_count")
-  isActive          Boolean  @default(true) @map("is_active")
-  image             String?  // превью (обложка), одна картинка с кропом
-  sliderVideo       String?  @map("slider_video") // видео для главного слайдера (WebM)
-  images            String[] // фотогалерея
-  directions        String[] // Направление: Архыз, Домбай, Джылы-Суу, Медовые водопады
-  seasons           String[] // Сезон: зима, весна, лето, осень
-  objectTypes       String[] @map("object_types") // Вид объекта: заповедник, горы, озера/реки, ледники, водопады, ущелья, пещеры
-  accessibility     String[] // Доступность: только пешком, на машине
-  customFilters     Json?    @map("custom_filters") // значения дополнительных групп { "key": ["v1"] }
-  nearbyPlaceIds    String[] @db.ObjectId @map("nearby_place_ids")
-  reviews           Review[]
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  title            String
+  slug             String   @unique
+  location         String?
+  latitude         Float? // широта для карты
+  longitude        Float? // долгота для карты
+  shortDescription String?  @map("short_description")
+  description      String?
+  howToGet         String?  @map("how_to_get")
+  importantInfo    String?  @map("important_info")
+  mapUrl           String?  @map("map_url")
+  audioGuide       String?  @map("audio_guide")
+  video            String?
+  rating           Float?   @default(0)
+  reviewsCount     Int      @default(0) @map("reviews_count")
+  uniqueViewsCount Int      @default(0) @map("unique_views_count")
+  isActive         Boolean  @default(true) @map("is_active")
+  image            String? // превью (обложка), одна картинка с кропом
+  sliderVideo      String?  @map("slider_video") // видео для главного слайдера (WebM)
+  images           String[] // фотогалерея
+  directions       String[] // Направление: Архыз, Домбай, Джылы-Суу, Медовые водопады
+  seasons          String[] // Сезон: зима, весна, лето, осень
+  objectTypes      String[] @map("object_types") // Вид объекта: заповедник, горы, озера/реки, ледники, водопады, ущелья, пещеры
+  accessibility    String[] // Доступность: только пешком, на машине
+  customFilters    Json?    @map("custom_filters") // значения дополнительных групп { "key": ["v1"] }
+  nearbyPlaceIds   String[] @map("nearby_place_ids") @db.ObjectId
+  reviews          Review[]
 
   @@map("places")
 }
 
 // Конфигурация фильтров мест (одна запись: группы и значения для сайта и формы места)
 model PlaceFilterConfig {
-  id                 String   @id @default("default") @map("_id")
-  directions         String[]
-  seasons            String[]
-  objectTypes        String[] @map("object_types")
-  accessibility       String[]
-  extraGroups        Json?    @map("extra_groups")   // [{ key, label, icon?, iconType?, values }]
-  fixedGroupMeta     Json?    @map("fixed_group_meta")   // { "directions": { label?, icon?, iconType? }, ... }
-  hiddenFixedGroups  Json?    @map("hidden_fixed_groups") // ["directions", ...] — скрытые встроенные группы
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  id                String   @id @default("default") @map("_id")
+  directions        String[]
+  seasons           String[]
+  objectTypes       String[] @map("object_types")
+  accessibility     String[]
+  extraGroups       Json?    @map("extra_groups") // [{ key, label, icon?, iconType?, values }]
+  fixedGroupMeta    Json?    @map("fixed_group_meta") // { "directions": { label?, icon?, iconType? }, ... }
+  hiddenFixedGroups Json?    @map("hidden_fixed_groups") // ["directions", ...] — скрытые встроенные группы
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("place_filter_config")
 }
@@ -170,19 +170,19 @@ model PlaceFilterConfig {
 // =============== НОВОСТИ ===============
 
 model News {
-  id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
   title            String
-  slug             String   @unique
-  type             String   @default("news") // news | article
-  category         String?  // Новости, Маршруты, Гайды, События, Анонсы
-  shortDescription String?  @map("short_description") // превью для карточки
-  preview          String?  // превью с кропом (только для новостей)
-  image            String?  // главная картинка
+  slug             String    @unique
+  type             String    @default("news") // news | article
+  category         String? // Новости, Маршруты, Гайды, События, Анонсы
+  shortDescription String?   @map("short_description") // превью для карточки
+  preview          String? // превью с кропом (только для новостей)
+  image            String? // главная картинка
   publishedAt      DateTime? @map("published_at")
-  isActive         Boolean  @default(false) @map("is_active")
-  blocks           Json?    // [{ id, type, order, data }] heading|text|image|gallery|quote|video
+  isActive         Boolean   @default(false) @map("is_active")
+  blocks           Json? // [{ id, type, order, data }] heading|text|image|gallery|quote|video
   images           String[] // legacy, для обратной совместимости
 
   @@map("news")
@@ -196,15 +196,15 @@ model Service {
   updatedAt        DateTime       @updatedAt @map("updated_at")
   title            String
   slug             String         @unique
-  category         String?        // Гид, Прокат, Гостиница и т.д.
+  category         String? // Гид, Прокат, Гостиница и т.д.
   shortDescription String?        @map("short_description")
   description      String?
   phone            String?
   email            String?
   telegram         String?
   address          String?
-  latitude         Float?   // широта для карты
-  longitude        Float?   // долгота для карты
+  latitude         Float? // широта для карты
+  longitude        Float? // долгота для карты
   rating           Float?         @default(0)
   reviewsCount     Int            @default(0) @map("reviews_count")
   uniqueViewsCount Int            @default(0) @map("unique_views_count")
@@ -213,9 +213,9 @@ model Service {
   images           String[]
   certificates     String[]
   prices           ServicePrice[]
-  data             Json?         // тип-специфичные данные (теги, секции, каталог и т.д.)
+  data             Json? // тип-специфичные данные (теги, секции, каталог и т.д.)
   reviews          Review[]
-  routeIds         String[]      @default([]) @map("route_ids") @db.ObjectId // для гидов: id маршрутов, в которых участвует
+  routeIds         String[]       @default([]) @map("route_ids") @db.ObjectId // для гидов: id маршрутов, в которых участвует
 
   @@map("services")
 }
@@ -233,26 +233,26 @@ model Review {
   updatedAt    DateTime     @updatedAt @map("updated_at")
   authorName   String       @map("author_name")
   authorAvatar String?      @map("author_avatar")
-  rating       Int          // 1-5
+  rating       Int // 1-5
   text         String
   status       ReviewStatus @default(pending)
-  
+
   // Связь с пользователем (опционально)
-  userId       String?      @db.ObjectId @map("user_id")
-  user         User?        @relation(fields: [userId], references: [id])
-  
+  userId String? @map("user_id") @db.ObjectId
+  user   User?   @relation(fields: [userId], references: [id])
+
   // Полиморфная связь с сущностями
-  entityType   String       @map("entity_type") // route, place, service
-  entityId     String       @db.ObjectId @map("entity_id")
-  entityTitle  String?      @map("entity_title")
-  
+  entityType  String  @map("entity_type") // route, place, service
+  entityId    String  @map("entity_id") @db.ObjectId
+  entityTitle String? @map("entity_title")
+
   // Связи (опциональные, для удобства)
-  routeId      String?      @db.ObjectId @map("route_id")
-  route        Route?       @relation(fields: [routeId], references: [id], onDelete: Cascade)
-  placeId      String?      @db.ObjectId @map("place_id")
-  place        Place?       @relation(fields: [placeId], references: [id], onDelete: Cascade)
-  serviceId    String?      @db.ObjectId @map("service_id")
-  service      Service?     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  routeId   String?  @map("route_id") @db.ObjectId
+  route     Route?   @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  placeId   String?  @map("place_id") @db.ObjectId
+  place     Place?   @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  serviceId String?  @map("service_id") @db.ObjectId
+  service   Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@map("reviews")
 }
@@ -262,15 +262,25 @@ model Review {
 model Region {
   id        String   @id @default("default") @map("_id")
   updatedAt DateTime @updatedAt @map("updated_at")
-  content   Json?    // hero, intro, facts, history, nature, culture, places, cta
+  content   Json? // hero, intro, facts, history, nature, culture, places, cta
+
   @@map("region")
 }
 
 model Footer {
   id        String   @id @default("default") @map("_id")
   updatedAt DateTime @updatedAt @map("updated_at")
-  content   Json?    // left, center, right, bottom
+  content   Json? // left, center, right, bottom
+
   @@map("footer")
+}
+
+model Home {
+  id        String   @id @default("default") @map("_id")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  content   Json? // routesTitle, seasons, firstTimeTitle, firstTimeDesc, servicesTitle, placesTitle, backgroundImage
+
+  @@map("home")
 }
 
 // =============== МЕДИА ===============
@@ -292,11 +302,11 @@ model UserRoute {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  userId      String   @db.ObjectId @map("user_id")
+  userId      String   @map("user_id") @db.ObjectId
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
   description String?
-  placeIds    String[] @db.ObjectId @map("place_ids")
+  placeIds    String[] @map("place_ids") @db.ObjectId
   notes       String?
   isActive    Boolean  @default(true) @map("is_active")
 
@@ -306,13 +316,13 @@ model UserRoute {
 // =============== ОТСЛЕЖИВАНИЕ ПРОСМОТРОВ ===============
 
 model ViewTracking {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt   DateTime @default(now()) @map("created_at")
-  entityType  String   @map("entity_type") // place, route, service
-  entityId    String   @db.ObjectId @map("entity_id")
-  userId      String?  @db.ObjectId @map("user_id") // для авторизованных
-  visitorId   String?  @map("visitor_id") // UUID для неавторизованных
-  
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt  DateTime @default(now()) @map("created_at")
+  entityType String   @map("entity_type") // place, route, service
+  entityId   String   @map("entity_id") @db.ObjectId
+  userId     String?  @map("user_id") @db.ObjectId // для авторизованных
+  visitorId  String?  @map("visitor_id") // UUID для неавторизованных
+
   @@unique([entityType, entityId, userId, visitorId])
   @@map("view_tracking")
 }

@@ -76,6 +76,7 @@ import {
 
 import { getRegion, updateRegion } from "./region.controller.js"
 import { getFooter, updateFooter } from "./footer.controller.js"
+import { getHome, updateHome } from "./home.controller.js"
 
 const router = express.Router()
 
@@ -219,6 +220,10 @@ router.post("/place-filters/remove-value", removeFilterValue)
 // Region (страница «О регионе»)
 router.get("/region", getRegion)
 router.put("/region", updateRegion)
+
+// Home (главная страница)
+router.get("/home", getHome)
+router.put("/home", updateHome)
 
 // Footer
 router.get("/footer", getFooter)

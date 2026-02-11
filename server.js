@@ -20,6 +20,7 @@ import servicesPublicRoutes from "./app/services/services.routes.js"
 import newsPublicRoutes from "./app/news/news.routes.js"
 import regionPublicRoutes from "./app/region/region.routes.js"
 import footerPublicRoutes from "./app/footer/footer.routes.js"
+import homePublicRoutes from "./app/home/home.routes.js"
 
 dotenv.config()
 
@@ -68,6 +69,7 @@ async function main() {
   app.use("/api/news", newsPublicRoutes)
   app.use("/api/region", regionPublicRoutes)
   app.use("/api/footer", footerPublicRoutes)
+  app.use("/api/home", homePublicRoutes)
 
   app.use(notFound)
   app.use(errorHandler)
