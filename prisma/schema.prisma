@@ -283,6 +283,14 @@ model Home {
   @@map("home")
 }
 
+model Page {
+  id        String   @id @map("_id")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  content   Json? // hero: { title, description, image }
+
+  @@map("pages")
+}
+
 // =============== МЕДИА ===============
 
 model Media {

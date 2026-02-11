@@ -21,6 +21,7 @@ import newsPublicRoutes from "./app/news/news.routes.js"
 import regionPublicRoutes from "./app/region/region.routes.js"
 import footerPublicRoutes from "./app/footer/footer.routes.js"
 import homePublicRoutes from "./app/home/home.routes.js"
+import pagesPublicRoutes from "./app/pages/pages.routes.js"
 
 dotenv.config()
 
@@ -70,6 +71,7 @@ async function main() {
   app.use("/api/region", regionPublicRoutes)
   app.use("/api/footer", footerPublicRoutes)
   app.use("/api/home", homePublicRoutes)
+  app.use("/api/pages", pagesPublicRoutes)
 
   app.use(notFound)
   app.use(errorHandler)

@@ -77,6 +77,7 @@ import {
 import { getRegion, updateRegion } from "./region.controller.js"
 import { getFooter, updateFooter } from "./footer.controller.js"
 import { getHome, updateHome } from "./home.controller.js"
+import { getPage, updatePage } from "./pages.controller.js"
 
 const router = express.Router()
 
@@ -228,6 +229,10 @@ router.put("/home", updateHome)
 // Footer
 router.get("/footer", getFooter)
 router.put("/footer", updateFooter)
+
+// Pages (страницы сайта: routes, places, news, services)
+router.get("/pages/:pageName", getPage)
+router.put("/pages/:pageName", updatePage)
 
 // Route filters (конфигурация фильтров маршрутов)
 router.get("/route-filters", getRouteFilters)
