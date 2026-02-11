@@ -3,6 +3,7 @@ import express from "express"
 import morgan from "morgan"
 import path from "path"
 import cors from "cors"
+import cookieParser from "cookie-parser"
 
 import fs from "fs"
 import https from "https"
@@ -23,7 +24,27 @@ import footerPublicRoutes from "./app/footer/footer.routes.js"
 dotenv.config()
 
 const app = express()
-app.use(cors())
+
+// Настройка CORS с поддержкой credentials
+const corsOptions = {
+  origin: function (origin, callback) {
+    // В development разрешаем все origins, в production только из env
+    if (process.env.NODE_ENV === 'development' || !process.env.FRONTEND_URL) {
+      callback(null, true)
+    } else {
+      const allowedOrigins = process.env.FRONTEND_URL.split(',').map(url => url.trim())
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true)
+      } else {
+        callback(new Error('Not allowed by CORS'))
+      }
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200,
+}
+
+app.use(cors(corsOptions))
 
 const isDev = process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "development"
 const isProd = process.env.NODE_ENV === "production"
@@ -31,6 +52,8 @@ const isProd = process.env.NODE_ENV === "production"
 async function main() {
   if (isDev) app.use(morgan("dev"))
 
+  // Cookie parser должен быть ДО роутов, чтобы cookies были доступны в middleware
+  app.use(cookieParser())
   app.use(express.json({ limit: "10mb" }))
 
   const __dirname = path.resolve()

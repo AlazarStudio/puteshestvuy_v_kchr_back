@@ -29,12 +29,21 @@ export const getServicesPublic = asyncHandler(async (req, res) => {
     where.category = { in: categoriesArr }
   }
 
+  // Определяем сортировку
+  const sortBy = (req.query.sortBy || 'createdAt').toLowerCase()
+  let orderBy
+  if (sortBy === 'popularity') {
+    orderBy = { uniqueViewsCount: 'desc' }
+  } else {
+    orderBy = { createdAt: 'desc' }
+  }
+
   const [items, total] = await Promise.all([
     prisma.service.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: "desc" },
+      orderBy,
     }),
     prisma.service.count({ where }),
   ])
@@ -76,6 +85,77 @@ export const getServiceByIdOrSlugPublic = asyncHandler(async (req, res) => {
   if (!service) {
     res.status(404)
     throw new Error("Услуга не найдена")
+  }
+
+  // Отслеживание уникальных просмотров
+  if (req.visitorId) {
+    try {
+      // Ищем существующий просмотр
+      const whereCondition = {
+        entityType: 'service',
+        entityId: service.id,
+        OR: req.userId 
+          ? [{ userId: req.userId }]
+          : [{ visitorId: req.visitorId }],
+      }
+
+      const existingView = await prisma.viewTracking.findFirst({
+        where: whereCondition,
+      })
+
+      if (!existingView) {
+        // Создаем запись о просмотре
+        await prisma.viewTracking.create({
+          data: {
+            entityType: 'service',
+            entityId: service.id,
+            userId: req.userId || null,
+            visitorId: req.userId ? null : req.visitorId,
+          },
+        })
+
+        // Увеличиваем счетчик уникальных просмотров
+        try {
+          const currentService = await prisma.service.findUnique({
+            where: { id: service.id },
+            select: { uniqueViewsCount: true },
+          })
+          
+          const currentCount = currentService?.uniqueViewsCount ?? 0
+          const newCount = currentCount + 1
+          const updatedService = await prisma.service.update({
+            where: { id: service.id },
+            data: {
+              uniqueViewsCount: newCount,
+            },
+          })
+          
+          service.uniqueViewsCount = updatedService.uniqueViewsCount ?? newCount
+        } catch (updateError) {
+          console.error('[View Tracking] Error updating service uniqueViewsCount:', updateError.message)
+          const currentCount = service.uniqueViewsCount ?? 0
+          try {
+            const directUpdate = await prisma.service.update({
+              where: { id: service.id },
+              data: { uniqueViewsCount: currentCount + 1 },
+            })
+            service.uniqueViewsCount = directUpdate.uniqueViewsCount
+          } catch (directError) {
+            console.error('[View Tracking] Error in direct update:', directError.message)
+          }
+        }
+      } else {
+        // Получаем актуальный счетчик из базы
+        const currentService = await prisma.service.findUnique({
+          where: { id: service.id },
+          select: { uniqueViewsCount: true },
+        })
+        service.uniqueViewsCount = currentService?.uniqueViewsCount ?? 0
+      }
+    } catch (error) {
+      // Игнорируем ошибки отслеживания, чтобы не ломать основной функционал
+      console.error('Error tracking view:', error)
+    }
   }
 
   const routeIds = Array.isArray(service.routeIds) ? service.routeIds : []

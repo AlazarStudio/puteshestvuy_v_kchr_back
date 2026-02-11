@@ -46,6 +46,7 @@ export const getServices = asyncHandler(async (req, res) => {
     title: 'title',
     category: 'category',
     rating: 'rating',
+    uniqueViewsCount: 'uniqueViewsCount',
     isActive: 'isActive',
     createdAt: 'createdAt',
   }

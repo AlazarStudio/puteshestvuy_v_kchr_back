@@ -46,6 +46,7 @@ export const getRoutes = asyncHandler(async (req, res) => {
     seasons: 'season', // В модели Route поле называется season (строка), не seasons
     difficulty: 'difficulty',
     distance: 'distance',
+    uniqueViewsCount: 'uniqueViewsCount',
     isActive: 'isActive',
     createdAt: 'createdAt',
   }

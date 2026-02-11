@@ -1,12 +1,6 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
 
-const DEFAULT_FILTERS = {
-  directions: ['Архыз', 'Домбай', 'Джылы-Суу', 'Медовые водопады'],
-  seasons: ['зима', 'весна', 'лето', 'осень'],
-  objectTypes: ['заповедник', 'горы', 'озера/реки', 'ледники', 'водопады', 'ущелья', 'пещеры'],
-  accessibility: ['только пешком', 'на машине'],
-}
 
 function getExtraGroupsFromConfig(config) {
   const raw = config?.extraGroups
@@ -26,13 +20,19 @@ export const getPlaceFiltersPublic = asyncHandler(async (req, res) => {
     where: { id: 'default' },
   })
   if (!config) {
-    return res.json({ ...DEFAULT_FILTERS, extraGroups: [] })
+    return res.json({
+      directions: [],
+      seasons: [],
+      objectTypes: [],
+      accessibility: [],
+      extraGroups: [],
+    })
   }
   res.json({
-    directions: config.directions ?? [],
-    seasons: config.seasons ?? [],
-    objectTypes: config.objectTypes ?? [],
-    accessibility: config.accessibility ?? [],
+    directions: Array.isArray(config.directions) ? config.directions : [],
+    seasons: Array.isArray(config.seasons) ? config.seasons : [],
+    objectTypes: Array.isArray(config.objectTypes) ? config.objectTypes : [],
+    accessibility: Array.isArray(config.accessibility) ? config.accessibility : [],
     extraGroups: getExtraGroupsFromConfig(config),
   })
 })
@@ -51,6 +51,13 @@ export const getPlacesPublic = asyncHandler(async (req, res) => {
   const seasonsArr = arr(req.query.seasons || req.query['seasons[]']).filter(Boolean)
   const objectTypesArr = arr(req.query.objectTypes || req.query['objectTypes[]']).filter(Boolean)
   const accessibilityArr = arr(req.query.accessibility || req.query['accessibility[]']).filter(Boolean)
+
+  // Получаем конфиг для extraGroups
+  const config = await prisma.placeFilterConfig.findUnique({
+    where: { id: 'default' },
+    select: { extraGroups: true },
+  })
+  const extraGroups = getExtraGroupsFromConfig(config)
 
   const where = { isActive: true }
   if (search) {
@@ -76,12 +83,41 @@ export const getPlacesPublic = asyncHandler(async (req, res) => {
     where.accessibility = { hasSome: accessibilityArr }
   }
 
+  // Обработка extraGroups фильтров через customFilters
+  const extraFilters = []
+  for (const g of extraGroups) {
+    if (!g.key) continue
+    const valuesArr = arr(req.query[g.key] || req.query[`${g.key}[]`]).filter(Boolean)
+    if (valuesArr.length > 0) {
+      // Фильтруем места, у которых в customFilters есть значения для этого ключа
+      // Для MongoDB Prisma используем path и array_contains (принимает массив)
+      extraFilters.push({
+        customFilters: {
+          path: [g.key],
+          array_contains: valuesArr,
+        },
+      })
+    }
+  }
+  if (extraFilters.length > 0) {
+    where.AND = (where.AND || []).concat(extraFilters)
+  }
+
+  // Определяем сортировку
+  const sortBy = (req.query.sortBy || 'createdAt').toLowerCase()
+  let orderBy
+  if (sortBy === 'popularity') {
+    orderBy = { uniqueViewsCount: 'desc' }
+  } else {
+    orderBy = { createdAt: 'desc' }
+  }
+
   const [items, total] = await Promise.all([
     prisma.place.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
     }),
     prisma.place.count({ where }),
   ])
@@ -119,6 +155,77 @@ export const getPlaceByIdOrSlugPublic = asyncHandler(async (req, res) => {
   if (!place) {
     res.status(404)
     throw new Error('Место не найдено')
+  }
+
+  // Отслеживание уникальных просмотров
+  if (req.visitorId) {
+    try {
+      // Ищем существующий просмотр
+      const whereCondition = {
+        entityType: 'place',
+        entityId: place.id,
+        OR: req.userId 
+          ? [{ userId: req.userId }]
+          : [{ visitorId: req.visitorId }],
+      }
+
+      const existingView = await prisma.viewTracking.findFirst({
+        where: whereCondition,
+      })
+
+      if (!existingView) {
+        // Создаем запись о просмотре
+        await prisma.viewTracking.create({
+          data: {
+            entityType: 'place',
+            entityId: place.id,
+            userId: req.userId || null,
+            visitorId: req.userId ? null : req.visitorId,
+          },
+        })
+
+        // Увеличиваем счетчик уникальных просмотров
+        try {
+          const currentPlace = await prisma.place.findUnique({
+            where: { id: place.id },
+            select: { uniqueViewsCount: true },
+          })
+          
+          const currentCount = currentPlace?.uniqueViewsCount ?? 0
+          const newCount = currentCount + 1
+          const updatedPlace = await prisma.place.update({
+            where: { id: place.id },
+            data: {
+              uniqueViewsCount: newCount,
+            },
+          })
+          
+          place.uniqueViewsCount = updatedPlace.uniqueViewsCount ?? newCount
+        } catch (updateError) {
+          console.error('[View Tracking] Error updating place uniqueViewsCount:', updateError.message)
+          const currentCount = place.uniqueViewsCount ?? 0
+          try {
+            const directUpdate = await prisma.place.update({
+              where: { id: place.id },
+              data: { uniqueViewsCount: currentCount + 1 },
+            })
+            place.uniqueViewsCount = directUpdate.uniqueViewsCount
+          } catch (directError) {
+            console.error('[View Tracking] Error in direct update:', directError.message)
+          }
+        }
+      } else {
+        // Получаем актуальный счетчик из базы
+        const currentPlace = await prisma.place.findUnique({
+          where: { id: place.id },
+          select: { uniqueViewsCount: true },
+        })
+        place.uniqueViewsCount = currentPlace?.uniqueViewsCount ?? 0
+      }
+    } catch (error) {
+      // Игнорируем ошибки отслеживания, чтобы не ломать основной функционал
+      console.error('Error tracking view:', error)
+    }
   }
 
   const nearbyPlaceIds = Array.isArray(place.nearbyPlaceIds) ? place.nearbyPlaceIds : []

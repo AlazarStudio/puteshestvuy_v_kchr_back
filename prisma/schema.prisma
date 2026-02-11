@@ -70,6 +70,7 @@ model Route {
   isActive         Boolean      @default(true) @map("is_active")
   rating           Float?       @default(0)
   reviewsCount     Int          @default(0) @map("reviews_count")
+  uniqueViewsCount Int          @default(0) @map("unique_views_count")
   images           String[]     // массив URL изображений
   points           RoutePoint[]
   reviews          Review[]
@@ -134,6 +135,7 @@ model Place {
   video             String?
   rating            Float?   @default(0)
   reviewsCount      Int      @default(0) @map("reviews_count")
+  uniqueViewsCount  Int      @default(0) @map("unique_views_count")
   isActive          Boolean  @default(true) @map("is_active")
   image             String?  // превью (обложка), одна картинка с кропом
   sliderVideo       String?  @map("slider_video") // видео для главного слайдера (WebM)
@@ -204,6 +206,7 @@ model Service {
   longitude        Float?   // долгота для карты
   rating           Float?         @default(0)
   reviewsCount     Int            @default(0) @map("reviews_count")
+  uniqueViewsCount Int            @default(0) @map("unique_views_count")
   isVerified       Boolean        @default(false) @map("is_verified")
   isActive         Boolean        @default(true) @map("is_active")
   images           String[]
@@ -297,4 +300,18 @@ model UserRoute {
   isActive    Boolean  @default(true) @map("is_active")
 
   @@map("user_routes")
+}
+
+// =============== ОТСЛЕЖИВАНИЕ ПРОСМОТРОВ ===============
+
+model ViewTracking {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt   DateTime @default(now()) @map("created_at")
+  entityType  String   @map("entity_type") // place, route, service
+  entityId    String   @db.ObjectId @map("entity_id")
+  userId      String?  @db.ObjectId @map("user_id") // для авторизованных
+  visitorId   String?  @map("visitor_id") // UUID для неавторизованных
+  
+  @@unique([entityType, entityId, userId, visitorId])
+  @@map("view_tracking")
 }

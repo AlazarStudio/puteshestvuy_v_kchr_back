@@ -49,6 +49,7 @@ export const getPlaces = asyncHandler(async (req, res) => {
     title: 'title',
     location: 'location',
     rating: 'rating',
+    uniqueViewsCount: 'uniqueViewsCount',
     isActive: 'isActive',
     createdAt: 'createdAt',
   }

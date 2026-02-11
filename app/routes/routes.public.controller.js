@@ -1,16 +1,6 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
 
-const DEFAULT_FILTERS = {
-  seasons: ['Зима', 'Весна', 'Лето', 'Осень'],
-  transport: ['Пешком', 'Верхом', 'Автомобиль', 'Квадроцикл'],
-  durationOptions: ['Полдня', '1 день', '2 дня', '3ч 30м', '5 дней'],
-  difficultyLevels: ['1', '2', '3', '4', '5'],
-  distanceOptions: ['до 10 км', '10–50 км', '50–100 км', '100+ км'],
-  elevationOptions: ['до 500 м', '500–1000 м', '1000+ м'],
-  isFamilyOptions: ['Да'],
-  hasOvernightOptions: ['Да'],
-}
 
 function getExtraGroupsFromConfig(config) {
   const raw = config?.extraGroups
@@ -33,7 +23,14 @@ export const getRouteFiltersPublic = asyncHandler(async (req, res) => {
   })
   if (!config) {
     return res.json({
-      ...DEFAULT_FILTERS,
+      seasons: [],
+      transport: [],
+      durationOptions: [],
+      difficultyLevels: [],
+      distanceOptions: [],
+      elevationOptions: [],
+      isFamilyOptions: [],
+      hasOvernightOptions: [],
       extraGroups: [],
       fixedGroupMeta: {},
     })
@@ -41,14 +38,14 @@ export const getRouteFiltersPublic = asyncHandler(async (req, res) => {
   const extraGroups = getExtraGroupsFromConfig(config)
   const fixedGroupMeta = config.fixedGroupMeta && typeof config.fixedGroupMeta === 'object' ? config.fixedGroupMeta : {}
   res.json({
-    seasons: config.seasons ?? DEFAULT_FILTERS.seasons,
-    transport: config.transport ?? DEFAULT_FILTERS.transport,
-    durationOptions: config.durationOptions ?? DEFAULT_FILTERS.durationOptions,
-    difficultyLevels: config.difficultyLevels ?? DEFAULT_FILTERS.difficultyLevels,
-    distanceOptions: config.distanceOptions ?? DEFAULT_FILTERS.distanceOptions,
-    elevationOptions: config.elevationOptions ?? DEFAULT_FILTERS.elevationOptions,
-    isFamilyOptions: config.isFamilyOptions ?? DEFAULT_FILTERS.isFamilyOptions,
-    hasOvernightOptions: config.hasOvernightOptions ?? DEFAULT_FILTERS.hasOvernightOptions,
+    seasons: Array.isArray(config.seasons) ? config.seasons : [],
+    transport: Array.isArray(config.transport) ? config.transport : [],
+    durationOptions: Array.isArray(config.durationOptions) ? config.durationOptions : [],
+    difficultyLevels: Array.isArray(config.difficultyLevels) ? config.difficultyLevels : [],
+    distanceOptions: Array.isArray(config.distanceOptions) ? config.distanceOptions : [],
+    elevationOptions: Array.isArray(config.elevationOptions) ? config.elevationOptions : [],
+    isFamilyOptions: Array.isArray(config.isFamilyOptions) ? config.isFamilyOptions : [],
+    hasOvernightOptions: Array.isArray(config.hasOvernightOptions) ? config.hasOvernightOptions : [],
     extraGroups,
     fixedGroupMeta,
   })
@@ -126,7 +123,42 @@ export const getRoutesPublic = asyncHandler(async (req, res) => {
     where.hasOvernight = true
   }
 
-  const orderBy = sortBy === 'difficulty' ? { difficulty: 'asc' } : { createdAt: 'desc' }
+  // Получаем конфиг для extraGroups
+  const config = await prisma.routeFilterConfig.findUnique({
+    where: { id: 'default' },
+    select: { extraGroups: true },
+  })
+  const extraGroups = getExtraGroupsFromConfig(config)
+
+  // Обработка extraGroups фильтров через customFilters
+  const extraFilters = []
+  for (const g of extraGroups) {
+    if (!g.key) continue
+    const valuesArr = arr(req.query[g.key] || req.query[`${g.key}[]`]).filter(Boolean)
+    if (valuesArr.length > 0) {
+      // Фильтруем маршруты, у которых в customFilters есть значения для этого ключа
+      // Для MongoDB Prisma используем path и array_contains (принимает массив)
+      extraFilters.push({
+        customFilters: {
+          path: [g.key],
+          array_contains: valuesArr,
+        },
+      })
+    }
+  }
+  if (extraFilters.length > 0) {
+    where.AND = (where.AND || []).concat(extraFilters)
+  }
+
+  // Определяем сортировку
+  let orderBy
+  if (sortBy === 'difficulty') {
+    orderBy = { difficulty: 'asc' }
+  } else if (sortBy === 'popularity') {
+    orderBy = { uniqueViewsCount: 'desc' }
+  } else {
+    orderBy = { createdAt: 'desc' }
+  }
 
   const [items, total] = await Promise.all([
     prisma.route.findMany({
@@ -198,6 +230,84 @@ export const getRouteByIdOrSlugPublic = asyncHandler(async (req, res) => {
   if (!route) {
     res.status(404)
     throw new Error('Маршрут не найден')
+  }
+
+  // Отслеживание уникальных просмотров
+  if (req.visitorId) {
+    try {
+      // Ищем существующий просмотр
+      const whereCondition = {
+        entityType: 'route',
+        entityId: route.id,
+        OR: req.userId 
+          ? [{ userId: req.userId }]
+          : [{ visitorId: req.visitorId }],
+      }
+
+      const existingView = await prisma.viewTracking.findFirst({
+        where: whereCondition,
+      })
+
+      if (!existingView) {
+        // Создаем запись о просмотре
+        await prisma.viewTracking.create({
+          data: {
+            entityType: 'route',
+            entityId: route.id,
+            userId: req.userId || null,
+            visitorId: req.userId ? null : req.visitorId,
+          },
+        })
+
+        // Увеличиваем счетчик уникальных просмотров
+        try {
+          const currentRoute = await prisma.route.findUnique({
+            where: { id: route.id },
+            select: { uniqueViewsCount: true },
+          })
+          
+          const currentCount = currentRoute?.uniqueViewsCount ?? 0
+          const newCount = currentCount + 1
+          const updatedRoute = await prisma.route.update({
+            where: { id: route.id },
+            data: {
+              uniqueViewsCount: newCount,
+            },
+          })
+
+          route.uniqueViewsCount = updatedRoute.uniqueViewsCount ?? newCount
+        } catch (updateError) {
+          console.error('[View Tracking] Error updating route uniqueViewsCount:', updateError.message)
+          try {
+            const currentRoute = await prisma.route.findUnique({
+              where: { id: route.id },
+              select: { uniqueViewsCount: true },
+            })
+            const currentCount = currentRoute?.uniqueViewsCount ?? 0
+            const newCount = currentCount + 1
+            const directUpdate = await prisma.route.update({
+              where: { id: route.id },
+              data: {
+                uniqueViewsCount: newCount,
+              },
+            })
+            route.uniqueViewsCount = directUpdate.uniqueViewsCount ?? newCount
+          } catch (directError) {
+            console.error('[View Tracking] Error in direct update:', directError.message)
+          }
+        }
+      } else {
+        // Получаем актуальный счетчик из базы
+        const currentRoute = await prisma.route.findUnique({
+          where: { id: route.id },
+          select: { uniqueViewsCount: true },
+        })
+        
+        route.uniqueViewsCount = currentRoute?.uniqueViewsCount ?? 0
+      }
+    } catch (error) {
+      console.error('[View Tracking] Error tracking route view:', error.message)
+    }
   }
 
   const placeIds = Array.isArray(route.placeIds) ? route.placeIds : []
