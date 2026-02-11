@@ -130,6 +130,7 @@ model Place {
   shortDescription  String?  @map("short_description")
   description       String?
   howToGet          String?  @map("how_to_get")
+  importantInfo     String?  @map("important_info")
   mapUrl            String?  @map("map_url")
   audioGuide        String?  @map("audio_guide")
   video             String?

@@ -156,6 +156,7 @@ export const createPlace = asyncHandler(async (req, res) => {
     shortDescription,
     description,
     howToGet,
+    importantInfo,
     mapUrl,
     audioGuide,
     video,
@@ -188,6 +189,7 @@ export const createPlace = asyncHandler(async (req, res) => {
       shortDescription,
       description,
       howToGet,
+      importantInfo,
       mapUrl,
       audioGuide,
       video,
@@ -229,6 +231,7 @@ export const updatePlace = asyncHandler(async (req, res) => {
     shortDescription,
     description,
     howToGet,
+    importantInfo,
     mapUrl,
     audioGuide,
     video,
@@ -254,6 +257,7 @@ export const updatePlace = asyncHandler(async (req, res) => {
   if (shortDescription !== undefined) data.shortDescription = shortDescription
   if (description !== undefined) data.description = description
   if (howToGet !== undefined) data.howToGet = howToGet
+  if (importantInfo !== undefined) data.importantInfo = importantInfo
   if (mapUrl !== undefined) data.mapUrl = mapUrl
   if (audioGuide !== undefined) data.audioGuide = audioGuide
   if (video !== undefined) data.video = video
