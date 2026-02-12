@@ -7,6 +7,7 @@ export const UserFields = {
   name: true,
   avatar: true,
   role: true,
+  isBanned: true,
   userInformation: true,
   favoriteRouteIds: true,
   favoritePlaceIds: true,

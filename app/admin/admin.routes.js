@@ -78,6 +78,13 @@ import { getRegion, updateRegion } from "./region.controller.js"
 import { getFooter, updateFooter } from "./footer.controller.js"
 import { getHome, updateHome } from "./home.controller.js"
 import { getPage, updatePage } from "./pages.controller.js"
+import {
+  getUsers,
+  getUserById,
+  updateUserRole,
+  banUser,
+  unbanUser,
+} from "./users.controller.js"
 
 const router = express.Router()
 
@@ -242,5 +249,16 @@ router.post("/route-filters/remove-group", removeRouteFilterGroup)
 router.patch("/route-filters/group-meta", updateRouteFilterGroupMeta)
 router.post("/route-filters/replace-value", replaceRouteFilterValue)
 router.post("/route-filters/remove-value", removeRouteFilterValue)
+
+// Users (пользователи)
+router.route("/users")
+  .get(getUsers)
+
+router.route("/users/:id")
+  .get(getUserById)
+
+router.put("/users/:id/role", updateUserRole)
+router.put("/users/:id/ban", banUser)
+router.put("/users/:id/unban", unbanUser)
 
 export default router

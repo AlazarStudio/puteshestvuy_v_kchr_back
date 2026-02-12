@@ -13,6 +13,7 @@ datasource db {
 
 enum Role {
   SUPERADMIN
+  ADMIN
   USER
 }
 
@@ -36,6 +37,7 @@ model User {
   name                String
   password            String
   role                Role             @default(USER)
+  isBanned            Boolean          @default(false) @map("is_banned")
   avatar              String?
   userInformation     UserInformation?
   reviews             Review[]

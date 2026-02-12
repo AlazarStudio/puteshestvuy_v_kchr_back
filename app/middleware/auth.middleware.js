@@ -6,7 +6,7 @@ import { UserFields } from "../utils/user.utils.js"
 
 // Role-based access control middleware
 export const admin = asyncHandler(async (req, res, next) => {
-  if (req.user && req.user.role === "SUPERADMIN") {
+  if (req.user && (req.user.role === "SUPERADMIN" || req.user.role === "ADMIN")) {
     next()
   } else {
     res.status(403)
