@@ -53,7 +53,7 @@ export const getUsers = asyncHandler(async (req, res) => {
   }
 
   // Обработка сортировки
-  const sortBy = req.query.sortBy || 'createdAt'
+  const sortBy = req.query.sortBy || null
   const sortOrder = req.query.sortOrder === 'asc' ? 'asc' : 'desc'
   
   const sortFieldMap = {
@@ -64,20 +64,48 @@ export const getUsers = asyncHandler(async (req, res) => {
     createdAt: 'createdAt',
   }
   
-  const orderBy = {
-    [sortFieldMap[sortBy] || 'createdAt']: sortOrder
+  // Если сортировка не указана, используем сортировку по createdAt (для применения кастомной сортировки по роли после)
+  // Если указана сортировка по конкретному полю, используем её
+  let orderBy
+  if (sortBy && sortBy !== 'role') {
+    // Для конкретных полей используем обычную сортировку
+    orderBy = {
+      [sortFieldMap[sortBy] || 'createdAt']: sortOrder
+    }
+  } else {
+    // По умолчанию сортируем по createdAt, затем применим кастомную сортировку по роли
+    orderBy = {
+      createdAt: 'desc'
+    }
   }
 
-  const [users, total] = await Promise.all([
-    prisma.user.findMany({
-      where,
-      select: UserFields,
-      skip,
-      take: limit,
-      orderBy,
-    }),
-    prisma.user.count({ where }),
-  ])
+  let users = await prisma.user.findMany({
+    where,
+    select: UserFields,
+    skip,
+    take: limit,
+    orderBy,
+  })
+  
+  // Если сортировка не указана или по роли, применяем кастомную сортировку ролей
+  // SUPERADMIN -> ADMIN -> USER, затем по createdAt
+  if (!sortBy || sortBy === 'role') {
+    const roleOrder = { 'SUPERADMIN': 1, 'ADMIN': 2, 'USER': 3 }
+    users.sort((a, b) => {
+      const roleDiff = (roleOrder[a.role] || 999) - (roleOrder[b.role] || 999)
+      if (roleDiff !== 0) {
+        // Если указана сортировка по роли с конкретным порядком, учитываем его
+        if (sortBy === 'role') {
+          return sortOrder === 'asc' ? roleDiff : -roleDiff
+        }
+        return roleDiff
+      }
+      // Если роли одинаковые, сортируем по createdAt
+      return new Date(b.createdAt) - new Date(a.createdAt)
+    })
+  }
+  
+  const total = await prisma.user.count({ where })
 
   const pages = Math.ceil(total / limit)
 
