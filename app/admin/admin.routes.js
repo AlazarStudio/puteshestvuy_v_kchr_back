@@ -87,7 +87,7 @@ import {
 
 const router = express.Router()
 
-// Разрешённые изображения: растры → WebP (кроме GIF/WebP); SVG без перекодирования
+// Разрешённые изображения: растры → WebP (GIF и SVG без перекодирования; WebP перекодируется)
 const imageMimeTypes = [
   'image/jpeg',
   'image/png',

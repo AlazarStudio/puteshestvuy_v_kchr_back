@@ -44,8 +44,8 @@ async function convertImageFileToWebp(inputPath, outputPath) {
 }
 
 /**
- * Обработка загруженного на диск изображения: WebP с rotate/resize, SVG/GIF/уже-WebP без перекодирования,
- * при ошибке sharp — оставляем оригинал (как в alazarstudio).
+ * Обработка загруженного на диск изображения: растры (включая WebP) → rotate/resize/WebP;
+ * SVG и GIF без перекодирования; при ошибке sharp — оставляем оригинал.
  *
  * @param {string} inputPath — абсолютный путь к временному файлу
  * @param {string} uploadsDirAbs — абсолютный каталог uploads
@@ -66,10 +66,6 @@ export async function finalizeUploadedImage(
     const stat = fs.statSync(inputPath)
     return { filename: basename, finalMimetype: mimetype, size: stat.size }
   }
-  if (mimetype === "image/webp" || fileExt === ".webp") {
-    const stat = fs.statSync(inputPath)
-    return { filename: basename, finalMimetype: mimetype, size: stat.size }
-  }
   if (mimetype === "image/gif" || fileExt === ".gif") {
     const stat = fs.statSync(inputPath)
     return { filename: basename, finalMimetype: mimetype, size: stat.size }
@@ -78,16 +74,24 @@ export async function finalizeUploadedImage(
   const parsed = path.parse(originalFilename || "file")
   const webpFilename = `${parsed.name || "file"}.webp`
   const webpPath = path.join(uploadsDirAbs, webpFilename)
+  // Если вход уже .webp, путь назначения совпадает с входом — пишем во временный файл
+  const sameAsInput = path.resolve(inputPath) === path.resolve(webpPath)
+  const writePath = sameAsInput
+    ? path.join(uploadsDirAbs, `${parsed.name || "file"}.webp.tmp`)
+    : webpPath
 
   try {
-    await convertImageFileToWebp(inputPath, webpPath)
+    await convertImageFileToWebp(inputPath, writePath)
     fs.unlinkSync(inputPath)
+    if (sameAsInput) {
+      fs.renameSync(writePath, webpPath)
+    }
     const stats = fs.statSync(webpPath)
     return { filename: webpFilename, finalMimetype: "image/webp", size: stats.size }
   } catch (error) {
-    if (fs.existsSync(webpPath)) {
+    if (fs.existsSync(writePath)) {
       try {
-        fs.unlinkSync(webpPath)
+        fs.unlinkSync(writePath)
       } catch (_) {
         /* ignore */
       }
