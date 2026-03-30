@@ -2,6 +2,7 @@ import express from "express"
 import multer from "multer"
 
 import { protect } from "../middleware/auth.middleware.js"
+import { imageDiskStorage } from "../utils/imageUpload.js"
 
 import {
   getUserProfile,
@@ -20,7 +21,20 @@ import {
 } from "./user.controller.js"
 
 const router = express.Router()
-const upload = multer({ storage: multer.memoryStorage() })
+
+const avatarFileFilter = (req, file, cb) => {
+  if (typeof file.mimetype === "string" && file.mimetype.startsWith("image/")) {
+    cb(null, true)
+  } else {
+    cb(new Error("Недопустимый тип файла. Разрешены только изображения."), false)
+  }
+}
+
+const upload = multer({
+  storage: imageDiskStorage,
+  fileFilter: avatarFileFilter,
+  limits: { fileSize: 15 * 1024 * 1024 },
+})
 
 router
   .route("/profile")

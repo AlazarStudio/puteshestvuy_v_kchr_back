@@ -1,51 +1,32 @@
 import asyncHandler from "express-async-handler"
-import sharp from "sharp"
 import { prisma } from "../prisma.js"
 import path from "path"
 import fs from "fs"
-const uploadsDir = path.join(process.cwd(), "uploads")
-const WEBP_QUALITY = 85
+import { uploadsDir, finalizeUploadedImage } from "../utils/imageUpload.js"
 
 function uniqueFilename(ext) {
   return `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`
 }
 
-// @desc    Upload image (конвертация в WebP, SVG сохраняется как есть)
+// @desc    Upload image (WebP с rotate/resize как alazarstudio; SVG / GIF / уже WebP — без перекодирования; ошибка sharp — оригинал)
 // @route   POST /api/admin/media/upload
 // @access  Admin
 export const uploadFile = asyncHandler(async (req, res) => {
-  if (!req.file || !req.file.buffer) {
+  if (!req.file || !req.file.path) {
     res.status(400)
     throw new Error("Файл не загружен")
   }
 
-  const { buffer, mimetype } = req.file
+  const inputPath = req.file.path
+  const originalFilename = req.file.filename
+  const mimetype = req.file.mimetype
 
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true })
-  }
-
-  let filename
-  let finalMimetype = mimetype
-  let size
-
-  // SVG sharp не конвертирует — сохраняем как есть
-  if (mimetype === "image/svg+xml") {
-    filename = uniqueFilename(".svg")
-    const filePath = path.join(uploadsDir, filename)
-    fs.writeFileSync(filePath, buffer)
-    size = buffer.length
-  } else {
-    // Остальные форматы → WebP
-    filename = uniqueFilename(".webp")
-    const filePath = path.join(uploadsDir, filename)
-    await sharp(buffer)
-      .webp({ quality: WEBP_QUALITY })
-      .toFile(filePath)
-    const stat = fs.statSync(filePath)
-    size = stat.size
-    finalMimetype = "image/webp"
-  }
+  const { filename, finalMimetype, size } = await finalizeUploadedImage(
+    inputPath,
+    uploadsDir,
+    originalFilename,
+    mimetype
+  )
 
   const url = `/uploads/${filename}`
 

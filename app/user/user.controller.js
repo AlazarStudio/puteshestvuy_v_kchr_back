@@ -1,18 +1,10 @@
 import { hash, verify } from "argon2"
 import asyncHandler from "express-async-handler"
-import sharp from "sharp"
-import path from "path"
 import fs from "fs"
 
 import { prisma } from "../prisma.js"
 import { UserFields } from "../utils/user.utils.js"
-
-const uploadsDir = path.join(process.cwd(), "uploads")
-const WEBP_QUALITY = 85
-
-function uniqueFilename(ext) {
-  return `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`
-}
+import { uploadsDir, finalizeUploadedImage } from "../utils/imageUpload.js"
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
@@ -99,41 +91,29 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
   res.json(updatedUser)
 })
 
-// @desc    Upload user avatar (with WebP conversion, similar to admin media upload)
+// @desc    Upload user avatar (та же логика WebP, что и admin/media/upload)
 // @route   POST /api/users/profile/avatar
 // @access  Private
 export const uploadUserAvatar = asyncHandler(async (req, res) => {
-  if (!req.file || !req.file.buffer) {
+  if (!req.file || !req.file.path) {
     res.status(400)
     throw new Error("Файл не загружен")
   }
 
-  const { buffer, mimetype } = req.file
+  const { path: inputPath, filename: originalFilename, mimetype } = req.file
 
   if (!mimetype.startsWith("image/")) {
+    if (fs.existsSync(inputPath)) try { fs.unlinkSync(inputPath) } catch (_) {}
     res.status(400)
     throw new Error("Недопустимый тип файла. Разрешены только изображения.")
   }
 
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true })
-  }
-
-  let filename
-  let finalMimetype = mimetype
-
-  if (mimetype === "image/svg+xml") {
-    filename = uniqueFilename(".svg")
-    const filePath = path.join(uploadsDir, filename)
-    fs.writeFileSync(filePath, buffer)
-  } else {
-    filename = uniqueFilename(".webp")
-    const filePath = path.join(uploadsDir, filename)
-    await sharp(buffer)
-      .webp({ quality: WEBP_QUALITY })
-      .toFile(filePath)
-    finalMimetype = "image/webp"
-  }
+  const { filename, finalMimetype } = await finalizeUploadedImage(
+    inputPath,
+    uploadsDir,
+    originalFilename,
+    mimetype
+  )
 
   const url = `/uploads/${filename}`
 

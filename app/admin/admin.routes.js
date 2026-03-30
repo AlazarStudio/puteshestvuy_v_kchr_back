@@ -1,8 +1,7 @@
 import express from "express"
 import multer from "multer"
-import path from "path"
-import fs from "fs"
 import { protect, admin } from "../middleware/auth.middleware.js"
+import { imageDiskStorage } from "../utils/imageUpload.js"
 
 // Controllers
 import {
@@ -88,7 +87,7 @@ import {
 
 const router = express.Router()
 
-// Все форматы изображений для конвертации в WebP (SVG сохраняется как есть)
+// Разрешённые изображения: растры → WebP (кроме GIF/WebP); SVG без перекодирования
 const imageMimeTypes = [
   'image/jpeg',
   'image/png',
@@ -109,9 +108,9 @@ const imageFileFilter = (req, file, cb) => {
   }
 }
 
-// Для загрузки изображений: буфер в память → в контроллере конвертация в WebP
+// Изображения: сначала на диск (как alazarstudio), затем sharp в контроллере
 const uploadImage = multer({
-  storage: multer.memoryStorage(),
+  storage: imageDiskStorage,
   fileFilter: imageFileFilter,
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB до конвертации
 })
