@@ -1,7 +1,7 @@
 import express from "express"
 import multer from "multer"
 import { protect, admin } from "../middleware/auth.middleware.js"
-import { imageDiskStorage } from "../utils/imageUpload.js"
+import { imageDiskStorage, MAX_IMAGE_UPLOAD_BYTES } from "../utils/imageUpload.js"
 
 // Controllers
 import {
@@ -112,7 +112,7 @@ const imageFileFilter = (req, file, cb) => {
 const uploadImage = multer({
   storage: imageDiskStorage,
   fileFilter: imageFileFilter,
-  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB до конвертации
+  limits: { fileSize: MAX_IMAGE_UPLOAD_BYTES },
 })
 
 const docMimeTypes = [

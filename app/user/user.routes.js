@@ -2,7 +2,7 @@ import express from "express"
 import multer from "multer"
 
 import { protect } from "../middleware/auth.middleware.js"
-import { imageDiskStorage } from "../utils/imageUpload.js"
+import { imageDiskStorage, MAX_IMAGE_UPLOAD_BYTES } from "../utils/imageUpload.js"
 
 import {
   getUserProfile,
@@ -33,7 +33,7 @@ const avatarFileFilter = (req, file, cb) => {
 const upload = multer({
   storage: imageDiskStorage,
   fileFilter: avatarFileFilter,
-  limits: { fileSize: 15 * 1024 * 1024 },
+  limits: { fileSize: MAX_IMAGE_UPLOAD_BYTES },
 })
 
 router

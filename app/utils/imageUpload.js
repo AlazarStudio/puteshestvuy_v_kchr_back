@@ -5,6 +5,9 @@ import sharp from "sharp"
 
 export const uploadsDir = path.join(process.cwd(), "uploads")
 
+/** Входящий файл до sharp (камеры часто отдают 15–25+ MB JPEG) */
+export const MAX_IMAGE_UPLOAD_BYTES = 40 * 1024 * 1024
+
 /** Как в alazarstudio: даунскейл очень больших изображений перед WebP */
 export const MAX_IMAGE_DIMENSION = 2560
 export const WEBP_QUALITY = 78
