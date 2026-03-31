@@ -104,8 +104,10 @@ export const createBookingRequest = asyncHandler(async (req, res) => {
 
     const clientEmail = safeText(contactEmail)
     const subjectClient = "Подтверждение получения заявки на бронирование"
+    const greetingName = safeText(contactName)
+    const greetingLine = greetingName ? `Здравствуйте, ${greetingName}!` : "Здравствуйте!"
     const textClient = [
-      "Здравствуйте!",
+      greetingLine,
       "",
       "Спасибо за вашу заявку на сайте путешествуйвкчр.рф.",
       "",
@@ -121,10 +123,11 @@ export const createBookingRequest = asyncHandler(async (req, res) => {
     ].join("\n")
 
     const htmlClient = `
-      <p>Здравствуйте!</p>
+      <p>${escapeHtml(greetingLine)}</p>
       <p>Спасибо за вашу заявку на сайте путешествуйвкчр.рф.</p>
       <p>Мы получили ваш запрос на бронирование путешествия по направлению «${escapeHtml(direction) || "—"}» с гидом «${escapeHtml(entityTitle || "—")}». Скоро с вами свяжется наш менеджер, чтобы подтвердить бронирование и уточнить все детали поездки.</p>
-      <p>Если у вас есть вопросы, вы можете позвонить нам по номеру: <strong>8 (928) 031-96-56</strong>. Будем рады помочь вам организовать отличное путешествие!</p>
+      <p>Если у вас есть вопросы, вы можете позвонить нам по номеру: <strong>8 (928) 031-96-56</strong>.</p>
+      <p>Будем рады помочь вам организовать отличное путешествие!</p>
       <br/>
       <br/>
       <p>С уважением,<br/>Команда путешествуйвкчр.рф</p>
