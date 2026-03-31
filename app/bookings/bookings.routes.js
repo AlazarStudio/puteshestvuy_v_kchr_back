@@ -1,8 +1,10 @@
 import express from "express"
-import { createBookingRequest } from "./bookings.public.controller.js"
+import { createBookingRequest, getBusyBookingDates } from "./bookings.public.controller.js"
 import { validateRequest } from "../middleware/validation.middleware.js"
 
 const router = express.Router()
+
+router.get("/busy-dates", getBusyBookingDates)
 
 router.post(
   "/",
