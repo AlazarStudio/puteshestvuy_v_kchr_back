@@ -17,6 +17,7 @@ import adminRoutes from "./app/admin/admin.routes.js"
 import placesPublicRoutes from "./app/places/places.routes.js"
 import routesPublicRoutes from "./app/routes/routes.routes.js"
 import servicesPublicRoutes from "./app/services/services.routes.js"
+import bookingsPublicRoutes from "./app/bookings/bookings.routes.js"
 import newsPublicRoutes from "./app/news/news.routes.js"
 import regionPublicRoutes from "./app/region/region.routes.js"
 import footerPublicRoutes from "./app/footer/footer.routes.js"
@@ -67,6 +68,7 @@ async function main() {
   app.use("/api/places", placesPublicRoutes)
   app.use("/api/routes", routesPublicRoutes)
   app.use("/api/services", servicesPublicRoutes)
+  app.use("/api/bookings", bookingsPublicRoutes)
   app.use("/api/news", newsPublicRoutes)
   app.use("/api/region", regionPublicRoutes)
   app.use("/api/footer", footerPublicRoutes)

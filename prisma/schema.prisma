@@ -23,6 +23,12 @@ enum ReviewStatus {
   rejected
 }
 
+enum BookingStatus {
+  new
+  processed
+  cancelled
+}
+
 type UserInformation {
   firstName String?
   lastName  String?
@@ -335,4 +341,37 @@ model ViewTracking {
 
   @@unique([entityType, entityId, userId, visitorId])
   @@map("view_tracking")
+}
+
+// =============== БРОНИРОВАНИЯ ===============
+
+model BookingRequest {
+  id        String        @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  status    BookingStatus @default(new)
+
+  // Что бронируют
+  entityType  String? @map("entity_type") // service | guide | route | etc
+  entityId    String? @map("entity_id") @db.ObjectId
+  entitySlug  String? @map("entity_slug")
+  entityTitle String? @map("entity_title")
+  category    String?
+
+  // Выбор пользователя
+  bookingDate DateTime @map("booking_date")
+  direction   String
+
+  // Контакты
+  contactName  String @map("contact_name")
+  contactPhone String @map("contact_phone")
+  contactEmail String @map("contact_email")
+  comment      String?
+
+  // Служебное
+  userAgent String? @map("user_agent")
+  ip        String?
+  raw       Json?   // на всякий случай, если будем расширять форму
+
+  @@map("booking_requests")
 }
