@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
+import { sendMailSafe } from "../utils/mailer.js"
 
 function parseBookingDate(value) {
   if (!value) return null
@@ -88,6 +89,104 @@ export const createBookingRequest = asyncHandler(async (req, res) => {
       raw: body.raw && typeof body.raw === "object" ? body.raw : null,
     },
   })
+
+  // Email notifications (не блокируют создание заявки)
+  try {
+    const bookingDateIso = toIsoDateUtc(bookingDate)
+    const safeText = (v) => String(v || "").trim()
+    const escapeHtml = (s) =>
+      safeText(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+
+    const clientEmail = safeText(contactEmail)
+    const subjectClient = "Подтверждение получения заявки на бронирование"
+    const textClient = [
+      "Здравствуйте!",
+      "",
+      "Спасибо за вашу заявку на сайте путешествуйвкчр.рф.",
+      "",
+      `Мы получили ваш запрос на бронирование путешествия по направлению «${safeText(direction) || "—"}» с гидом «${safeText(entityTitle) || "—"}».`,
+      "Скоро с вами свяжется наш менеджер, чтобы подтвердить бронирование и уточнить все детали поездки.",
+      "",
+      "Если у вас есть вопросы, вы можете позвонить нам по номеру: 8 (928) 031-96-56.",
+      "",
+      "Будем рады помочь вам организовать отличное путешествие!",
+      "",
+      "С уважением,",
+      "Команда путешествуйвкчр.рф",
+    ].join("\n")
+    const htmlClient = `
+      <p>Здравствуйте!</p>
+      <p>Спасибо за вашу заявку на сайте путешествуйвкчр.рф.</p>
+      <p>Мы получили ваш запрос на бронирование путешествия по направлению «${escapeHtml(direction) || "—"}» с гидом «${escapeHtml(entityTitle || "—")}».</p>
+      <p>Скоро с вами свяжется наш менеджер, чтобы подтвердить бронирование и уточнить все детали поездки.</p>
+      <p>Если у вас есть вопросы, вы можете позвонить нам по номеру: <strong>8 (928) 031-96-56</strong>.</p>
+      <p>Будем рады помочь вам организовать отличное путешествие!</p>
+      <p>С уважением,<br/>Команда путешествуйвкчр.рф</p>
+    `
+
+    await sendMailSafe({
+      to: clientEmail,
+      subject: subjectClient,
+      text: textClient,
+      html: htmlClient,
+    })
+
+    // Guide email: if booked entity is a Service (guide) and has email
+    let guideEmail = ""
+    if (entityId) {
+      const service = await prisma.service.findUnique({ where: { id: entityId }, select: { email: true, title: true } })
+      guideEmail = safeText(service?.email)
+    } else if (entitySlug) {
+      const service = await prisma.service.findUnique({ where: { slug: entitySlug }, select: { email: true, title: true } })
+      guideEmail = safeText(service?.email)
+    }
+
+    if (guideEmail) {
+      const subjectGuide = `Новая бронь${entityTitle ? `: ${safeText(entityTitle).slice(0, 60)}` : ""}`
+      const textGuide = [
+        "У вас новое бронирование.",
+        "",
+        `Дата: ${bookingDateIso || "—"}`,
+        `Направление: ${safeText(direction) || "—"}`,
+        "",
+        "Контакты клиента:",
+        `Имя: ${safeText(contactName) || "—"}`,
+        `Телефон: ${safeText(contactPhone) || "—"}`,
+        `Email: ${safeText(contactEmail) || "—"}`,
+        comment ? `\nКомментарий:\n${safeText(comment)}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+
+      const htmlGuide = `
+        <p><strong>У вас новое бронирование.</strong></p>
+        <p><strong>Дата:</strong> ${escapeHtml(bookingDateIso || "—")}</p>
+        <p><strong>Направление:</strong> ${escapeHtml(direction)}</p>
+        <hr />
+        <p><strong>Контакты клиента:</strong></p>
+        <p>Имя: ${escapeHtml(contactName || "—")}</p>
+        <p>Телефон: ${escapeHtml(contactPhone || "—")}</p>
+        <p>Email: ${escapeHtml(contactEmail || "—")}</p>
+        ${comment ? `<p><strong>Комментарий:</strong><br/>${escapeHtml(comment).replace(/\n/g, "<br/>")}</p>` : ""}
+      `
+
+      await sendMailSafe({
+        to: guideEmail,
+        subject: subjectGuide,
+        text: textGuide,
+        html: htmlGuide,
+        replyTo: clientEmail || undefined,
+      })
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[booking] email notify error", err?.message || err)
+  }
 
   res.status(201).json({ id: created.id, status: created.status })
 })

@@ -32,6 +32,7 @@ export const sendFeedback = asyncHandler(async (req, res) => {
   const smtpPort = process.env.SMTP_PORT || 587
   const smtpUser = process.env.SMTP_USER
   const smtpPass = process.env.SMTP_PASS
+  const smtpSecureRaw = process.env.SMTP_SECURE
 
   if (!smtpHost || !smtpUser || !smtpPass) {
     console.error('SMTP не настроен: SMTP_HOST, SMTP_USER, SMTP_PASS должны быть в .env')
@@ -40,10 +41,14 @@ export const sendFeedback = asyncHandler(async (req, res) => {
   }
 
   const port = Number(smtpPort) || 587
+  const secure =
+    smtpSecureRaw != null
+      ? ['1', 'true', 'yes'].includes(String(smtpSecureRaw).trim().toLowerCase())
+      : port === 465
   const transporter = nodemailer.createTransport({
     host: smtpHost,
     port,
-    secure: port === 465,
+    secure,
     auth: {
       user: smtpUser,
       pass: smtpPass,
@@ -51,7 +56,7 @@ export const sendFeedback = asyncHandler(async (req, res) => {
   })
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || smtpUser,
+    from: process.env.SMTP_FROM || process.env.MAIL_FROM || smtpUser,
     to: recipientEmail,
     replyTo: email.trim(),
     subject: `Обратная связь: ${(name || '').trim().slice(0, 50)}`,
