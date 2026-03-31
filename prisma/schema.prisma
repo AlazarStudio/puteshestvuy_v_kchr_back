@@ -45,6 +45,7 @@ model User {
   role                Role             @default(USER)
   isBanned            Boolean          @default(false) @map("is_banned")
   avatar              String?
+  phone               String?          @map("phone")
   userInformation     UserInformation?
   reviews             Review[]
   favoriteRouteIds    String[]         @default([]) @map("favorite_route_ids") @db.ObjectId

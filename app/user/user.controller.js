@@ -24,7 +24,7 @@ export const getUserProfile = asyncHandler(async (req, res) => {
 // @route   PUT /api/users/profile
 // @access  Private
 export const updateUserProfile = asyncHandler(async (req, res) => {
-  const { name, email, password, userInformation, avatar, currentPassword, newPassword } = req.body
+  const { name, email, phone, password, userInformation, avatar, currentPassword, newPassword } = req.body
 
   const updateData = {}
 
@@ -38,6 +38,10 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
       throw new Error("Email already in use")
     }
     updateData.email = email
+  }
+  if (typeof phone !== "undefined") {
+    const cleaned = String(phone || "").trim()
+    updateData.phone = cleaned ? cleaned : null
   }
   // Новый способ смены пароля: currentPassword + newPassword
   if (currentPassword || newPassword) {

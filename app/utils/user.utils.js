@@ -6,6 +6,7 @@ export const UserFields = {
   login: true,
   name: true,
   avatar: true,
+  phone: true,
   role: true,
   isBanned: true,
   userInformation: true,
