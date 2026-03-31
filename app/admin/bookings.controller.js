@@ -12,6 +12,9 @@ export const getBookingRequests = asyncHandler(async (req, res) => {
   const search = (req.query.search || "").trim()
   const includeHiddenRaw = req.query.includeHidden != null ? String(req.query.includeHidden) : ""
   const includeHidden = includeHiddenRaw === "1" || includeHiddenRaw.toLowerCase() === "true"
+  const sortBy = req.query.sortBy != null ? String(req.query.sortBy) : null
+  const sortOrderRaw = req.query.sortOrder != null ? String(req.query.sortOrder) : "desc"
+  const sortOrder = sortOrderRaw === "asc" ? "asc" : "desc"
 
   const where = {}
   if (!includeHidden) where.isVisible = true
@@ -26,12 +29,34 @@ export const getBookingRequests = asyncHandler(async (req, res) => {
     ]
   }
 
+  const orderBy = (() => {
+    if (!sortBy) return { createdAt: "desc" }
+    switch (sortBy) {
+      case "createdAt":
+        return { createdAt: sortOrder }
+      case "bookingDate":
+        return { bookingDate: sortOrder }
+      case "direction":
+        return { direction: sortOrder }
+      case "contactName":
+        return { contactName: sortOrder }
+      case "entityTitle":
+        return { entityTitle: sortOrder }
+      case "status":
+        return { status: sortOrder }
+      case "type":
+        return [{ category: sortOrder }, { entityType: sortOrder }]
+      default:
+        return { createdAt: "desc" }
+    }
+  })()
+
   const [items, total] = await Promise.all([
     prisma.bookingRequest.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: "desc" },
+      orderBy,
     }),
     prisma.bookingRequest.count({ where }),
   ])
