@@ -52,7 +52,7 @@ import {
 } from "./media.controller.js"
 
 import { getDashboardStats } from "./stats.controller.js"
-import { getBookingRequests, updateBookingRequestStatus } from "./bookings.controller.js"
+import { getBookingRequests, updateBookingRequestStatus, updateBookingRequestVisibility } from "./bookings.controller.js"
 
 import {
   getPlaceFilters,
@@ -264,5 +264,6 @@ router.put("/users/:id/unban", unbanUser)
 // Bookings (заявки на бронирование)
 router.get("/bookings", getBookingRequests)
 router.patch("/bookings/:id", updateBookingRequestStatus)
+router.patch("/bookings/:id/visibility", updateBookingRequestVisibility)
 
 export default router

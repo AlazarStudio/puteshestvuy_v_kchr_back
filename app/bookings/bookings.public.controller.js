@@ -119,6 +119,7 @@ export const getBusyBookingDates = asyncHandler(async (req, res) => {
 
   const items = await prisma.bookingRequest.findMany({
     where: {
+      isVisible: true,
       status: { in: ["new", "processed"] },
       ...(entityId ? { entityId } : { entitySlug }),
       bookingDate: {
