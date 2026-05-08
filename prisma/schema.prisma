@@ -219,6 +219,7 @@ model Service {
   uniqueViewsCount Int            @default(0) @map("unique_views_count")
   isVerified       Boolean        @default(false) @map("is_verified")
   isActive         Boolean        @default(true) @map("is_active")
+  cardPayment      Boolean?       @default(false) @map("card_payment")
   images           String[]
   certificates     String[]
   prices           ServicePrice[]
@@ -298,6 +299,40 @@ model Page {
   content   Json? // hero: { title, description, image }
 
   @@map("pages")
+}
+
+// =============== ПРЕДЛОЖЕНИЯ ПОЛЬЗОВАТЕЛЕЙ ===============
+
+model PlaceSuggestion {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  status           String   @default("pending") // pending | approved | rejected
+  submittedById    String   @map("submitted_by_id") @db.ObjectId
+  submitterName    String?  @map("submitter_name")
+  submitterEmail   String?  @map("submitter_email")
+  adminComment     String?  @map("admin_comment")
+  approvedPlaceId  String?  @map("approved_place_id") @db.ObjectId
+  title            String
+  location         String?
+  latitude         Float?
+  longitude        Float?
+  shortDescription String?  @map("short_description")
+  description      String?
+  howToGet         String?  @map("how_to_get")
+  importantInfo    String?  @map("important_info")
+  mapUrl           String?  @map("map_url")
+  audioGuide       String?  @map("audio_guide")
+  video            String?
+  image            String?
+  sliderVideo      String?  @map("slider_video")
+  images           String[]
+  directions       String[]
+  seasons          String[]
+  objectTypes      String[] @map("object_types")
+  accessibility    String[]
+
+  @@map("place_suggestions")
 }
 
 // =============== МЕДИА ===============

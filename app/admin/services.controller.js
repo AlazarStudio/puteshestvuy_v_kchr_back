@@ -26,16 +26,19 @@ export const getServices = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 10
   const skip = (page - 1) * limit
   const search = req.query.search || ''
+  const categoryFilter = req.query.category || ''
 
-  const where = search
-    ? {
-        OR: [
-          { title: { contains: search, mode: 'insensitive' } },
-          { category: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-        ],
-      }
-    : {}
+  const where = {}
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { category: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+    ]
+  }
+  if (categoryFilter) {
+    where.category = categoryFilter
+  }
 
   // Обработка сортировки
   const sortBy = req.query.sortBy || 'createdAt'
@@ -117,6 +120,7 @@ export const createService = asyncHandler(async (req, res) => {
     longitude,
     isVerified,
     isActive,
+    cardPayment,
     images,
     certificates,
     prices,
@@ -145,6 +149,7 @@ export const createService = asyncHandler(async (req, res) => {
       longitude: longitude != null ? Number(longitude) : null,
       isVerified: Boolean(isVerified),
       isActive: isActive !== false,
+      cardPayment: Boolean(cardPayment),
       images: images || [],
       certificates: certificates || [],
       prices: prices || [],
@@ -187,6 +192,7 @@ export const updateService = asyncHandler(async (req, res) => {
   if (req.body.longitude !== undefined) updateData.longitude = req.body.longitude != null ? Number(req.body.longitude) : null
   if (req.body.isVerified !== undefined) updateData.isVerified = Boolean(req.body.isVerified)
   if (req.body.isActive !== undefined) updateData.isActive = Boolean(req.body.isActive)
+  if (req.body.cardPayment !== undefined) updateData.cardPayment = Boolean(req.body.cardPayment)
   if (req.body.images !== undefined) updateData.images = req.body.images
   if (req.body.certificates !== undefined) updateData.certificates = req.body.certificates
   if (req.body.prices !== undefined) updateData.prices = req.body.prices

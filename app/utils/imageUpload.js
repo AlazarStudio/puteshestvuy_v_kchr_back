@@ -85,6 +85,15 @@ export async function finalizeUploadedImage(
 
   try {
     await convertImageFileToWebp(inputPath, writePath)
+    // Удаляем оригинал best-effort: на Windows файл может быть заблокирован антивирусом
+    // try {
+      // fs.unlinkSync(inputPath)
+    // } catch (_) {
+      /* ignore — оригинал останется на диске, но отдаём WebP */
+    // }
+    // if (sameAsInput) {
+    //   fs.renameSync(writePath, webpPath)
+    // }
     fs.unlinkSync(inputPath)
     if (sameAsInput) {
       fs.renameSync(writePath, webpPath)

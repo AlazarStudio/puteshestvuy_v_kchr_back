@@ -85,6 +85,15 @@ import {
   banUser,
   unbanUser,
 } from "./users.controller.js"
+import {
+  getSuggestions,
+  getPendingCount,
+  getSuggestionById,
+  updateSuggestion,
+  approveSuggestion,
+  confirmApproveSuggestion,
+  deleteSuggestion,
+} from "./suggestions.controller.js"
 
 const router = express.Router()
 
@@ -265,5 +274,14 @@ router.put("/users/:id/unban", unbanUser)
 router.get("/bookings", getBookingRequests)
 router.patch("/bookings/:id", updateBookingRequestStatus)
 router.patch("/bookings/:id/visibility", updateBookingRequestVisibility)
+
+// Suggestions (предложения пользователей)
+router.get("/suggestions/pending-count", getPendingCount)
+router.get("/suggestions", getSuggestions)
+router.get("/suggestions/:id", getSuggestionById)
+router.put("/suggestions/:id", updateSuggestion)
+router.post("/suggestions/:id/approve", approveSuggestion)
+router.post("/suggestions/:id/confirm-approve", confirmApproveSuggestion)
+router.delete("/suggestions/:id", deleteSuggestion)
 
 export default router

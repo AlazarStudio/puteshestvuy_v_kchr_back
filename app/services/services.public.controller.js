@@ -29,13 +29,22 @@ export const getServicesPublic = asyncHandler(async (req, res) => {
     where.category = { in: categoriesArr }
   }
 
+  if (req.query.cardPayment === 'true') {
+    where.cardPayment = true
+  }
+
   // Определяем сортировку
   const sortBy = (req.query.sortBy || 'createdAt').toLowerCase()
+  const hotelSelected = categoriesArr.includes('Гостиница')
   let orderBy
   if (sortBy === 'popularity') {
-    orderBy = { uniqueViewsCount: 'desc' }
+    orderBy = hotelSelected
+      ? [{ cardPayment: 'desc' }, { uniqueViewsCount: 'desc' }, { createdAt: 'desc' }]
+      : [{ uniqueViewsCount: 'desc' }, { createdAt: 'desc' }]
   } else {
-    orderBy = { createdAt: 'desc' }
+    orderBy = hotelSelected
+      ? [{ cardPayment: 'desc' }, { createdAt: 'desc' }]
+      : [{ createdAt: 'desc' }, { id: 'asc' }]
   }
 
   const [items, total] = await Promise.all([
