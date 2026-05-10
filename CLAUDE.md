@@ -9,19 +9,18 @@ Backend REST API for **Путешествуй в КЧР** — a travel website f
 ## Commands
 
 ```bash
-npm run dev           # Dev server with nodemon (port 5000)
-npm run create-admin  # Seed an admin user
-npm run backup        # MongoDB backup/restore CLI
-npm run sync-view-counts  # Sync view counts (also runs via cron)
-npx prisma migrate dev --name <name>  # Run a migration
-npx prisma studio     # DB browser UI (port 5555)
+npm run dev               # Dev server with nodemon (port 4000, hardcoded in server.js)
+npm run create-admin      # Seed a SUPERADMIN user
+npm run backup            # MongoDB backup/restore CLI
+npm run sync-view-counts  # Sync uniqueViewsCount from ViewTracking records
+npx prisma db push        # Sync schema to DB (MongoDB — no migrations)
+npx prisma studio         # DB browser UI (port 5555)
 ```
 
 ## Environment Variables
 
 ```
 NODE_ENV=development
-PORT=5000
 DATABASE_URL=mongodb://localhost:27017/puteshestvuy
 JWT_SECRET=
 
@@ -81,14 +80,17 @@ scripts/           # one-off scripts (createAdmin, syncViewCounts, importPlaces,
 | `/api/services` | public service listing + filters |
 | `/api/bookings` | booking requests + busy dates |
 | `/api/news` | news/articles |
+| `/api/suggestions` | user-submitted place suggestions |
 | `/api/region`, `/api/home`, `/api/footer`, `/api/pages` | CMS endpoints |
 
 ### Database Schema (MongoDB via Prisma)
 Key models:
-- **User** — role (`SUPERADMIN` / `ADMIN` / `USER`), favorites arrays (routeIds, placeIds, serviceIds), custom routes
+- **User** — role (`SUPERADMIN` / `ADMIN` / `USER`), favorites arrays (routeIds, placeIds, serviceIds)
+- **UserRoute** — custom routes created by users in the route constructor
 - **Route / Place / Service** — slug, images array, reviews, custom filter configs
 - **Review** — polymorphic via `entityType` + `entityId`, statuses: `pending / approved / rejected`
 - **BookingRequest** — polymorphic entity reference, status: `new / processed / cancelled`
+- **PlaceSuggestion** — user-submitted place ideas, status: `pending / approved / rejected`
 - **ViewTracking** — unique-per-visitor view deduplication (`entityType + entityId + userId/visitorId`)
 - **RouteFilterConfig / PlaceFilterConfig** — admin-configurable filter groups (JSON)
 - **Region, Home, Footer, Page** — JSON blob CMS models
