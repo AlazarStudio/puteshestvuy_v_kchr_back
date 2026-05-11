@@ -84,23 +84,28 @@ export const getPlacesPublic = asyncHandler(async (req, res) => {
   }
 
   // Обработка extraGroups фильтров через customFilters
-  const extraFilters = []
+  // Prisma 6 MongoDB не поддерживает path/array_contains для Json-полей —
+  // используем findRaw с нативным MongoDB dot-notation, затем фильтруем по id
+  const customFilterQuery = {}
   for (const g of extraGroups) {
     if (!g.key) continue
     const valuesArr = arr(req.query[g.key] || req.query[`${g.key}[]`]).filter(Boolean)
     if (valuesArr.length > 0) {
-      // Фильтруем места, у которых в customFilters есть значения для этого ключа
-      // Для MongoDB Prisma используем path и array_contains (принимает массив)
-      extraFilters.push({
-        customFilters: {
-          path: [g.key],
-          array_contains: valuesArr,
-        },
-      })
+      customFilterQuery[`custom_filters.${g.key}`] = valuesArr.length === 1
+        ? valuesArr[0]
+        : { $in: valuesArr }
     }
   }
-  if (extraFilters.length > 0) {
-    where.AND = (where.AND || []).concat(extraFilters)
+  if (Object.keys(customFilterQuery).length > 0) {
+    const rawDocs = await prisma.place.findRaw({
+      filter: customFilterQuery,
+      options: { projection: { _id: 1 } },
+    })
+    const matchingIds = rawDocs.map((r) => {
+      const oid = r._id
+      return typeof oid === 'string' ? oid : (oid.$oid ?? String(oid))
+    })
+    where.id = { in: matchingIds }
   }
 
   // Определяем сортировку
