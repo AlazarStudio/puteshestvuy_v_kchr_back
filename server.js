@@ -84,12 +84,17 @@ async function main() {
   app.use(notFound)
   app.use(errorHandler)
 
-  const PORT = isProd ? 443 : 4000 
+  // Когда перед приложением стоит TLS-терминирующий обратный прокси (Caddy/nginx),
+  // Node слушает обычный HTTP на внутреннем порту, а прокси держит HTTPS/HTTP2/HTTP3.
+  const behindProxy = process.env.BEHIND_PROXY === "true"
+  if (behindProxy) app.set("trust proxy", true)
+
+  const PORT = process.env.PORT ? Number(process.env.PORT) : (isProd ? 443 : 4000)
 
   let server
 
-  if (isProd) {
-    // SSL only in prod
+  if (isProd && !behindProxy) {
+    // SSL terminates in Node (direct, без прокси)
     let sslOptions
     try {
       sslOptions = {
@@ -106,9 +111,10 @@ async function main() {
       console.log(`HTTPS Server running in ${process.env.NODE_ENV} on port ${PORT}`)
     })
   } else {
-    // dev, etc → HTTP
-    server = app.listen(PORT, () => {
-      console.log(`HTTP Server running in ${process.env.NODE_ENV} on port ${PORT}`)
+    // dev, либо prod за обратным прокси → HTTP
+    const HOST = process.env.HOST || (behindProxy ? "127.0.0.1" : "0.0.0.0")
+    server = app.listen(PORT, HOST, () => {
+      console.log(`HTTP Server running in ${process.env.NODE_ENV} on ${HOST}:${PORT}`)
     })
   }
 
