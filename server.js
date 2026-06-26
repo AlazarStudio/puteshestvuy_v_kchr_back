@@ -1,5 +1,6 @@
 import dotenv from "dotenv"
 import express from "express"
+import compression from "compression"
 import morgan from "morgan"
 import path from "path"
 import cors from "cors"
@@ -55,6 +56,9 @@ const isProd = process.env.NODE_ENV === "production"
 
 async function main() {
   if (isDev) app.use(morgan("dev"))
+
+  // Сжатие ответов (gzip) — должно идти одним из первых, чтобы сжимать все ответы ниже
+  app.use(compression())
 
   // Cookie parser должен быть ДО роутов, чтобы cookies были доступны в middleware
   app.use(cookieParser())
