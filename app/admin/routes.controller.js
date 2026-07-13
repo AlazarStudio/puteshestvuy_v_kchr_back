@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
+import { normalizeYandexMapUrl } from '../utils/yandexMap.js'
 
 const generateSlug = (title) => {
   return title
@@ -161,7 +162,7 @@ export const createRoute = asyncHandler(async (req, res) => {
       elevationGain: elevationGain ? parseFloat(elevationGain) : null,
       whatToBring,
       importantInfo,
-      mapUrl: mapUrl ?? null,
+      mapUrl: await normalizeYandexMapUrl(mapUrl),
       isActive: isActive !== false,
       images: images || [],
       placeIds: placeIds || [],
@@ -231,7 +232,7 @@ export const updateRoute = asyncHandler(async (req, res) => {
     elevationGain: body.elevationGain !== undefined ? (body.elevationGain != null && body.elevationGain !== '' ? parseFloat(body.elevationGain) || null : null) : existing.elevationGain,
     whatToBring: body.whatToBring !== undefined ? (body.whatToBring ?? null) : existing.whatToBring,
     importantInfo: body.importantInfo !== undefined ? (body.importantInfo ?? null) : existing.importantInfo,
-    mapUrl: body.mapUrl !== undefined ? (body.mapUrl ?? null) : existing.mapUrl,
+    mapUrl: body.mapUrl !== undefined ? await normalizeYandexMapUrl(body.mapUrl) : existing.mapUrl,
     isActive: body.isActive !== undefined ? Boolean(body.isActive) : existing.isActive,
     images: Array.isArray(body.images) ? body.images : (existing.images ?? []),
     placeIds: Array.isArray(body.placeIds) ? body.placeIds : (Array.isArray(existing.placeIds) ? existing.placeIds : []),
