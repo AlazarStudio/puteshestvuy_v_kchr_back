@@ -1,6 +1,41 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
 
+// Совпадение метки локации (фильтр гостиниц/ресторанов) с текстом поля address.
+// Ключи должны совпадать с SERVICE_LOCATION_OPTIONS на фронте.
+// Районы дополнительно матчат свои сёла, т.к. в адресах чаще указано село, а не район.
+const LOCATION_MATCH_ALIASES = {
+  "Теберда": ["Теберда"],
+  "Домбай": ["Домбай"],
+  "Архыз": ["Архыз"],
+  "Махар": ["Махар"],
+  "Малокарачаевский район": [
+    "Малокарачаевский район",
+    "Учкекен",
+    "Кичи-Балык",
+    "Первомайское",
+    "Красный Восток",
+    "Терезе",
+    "Джага",
+    "Элькуш",
+    "Римгорское",
+    "Джилы-Су",
+    "Джылы-Су",
+  ],
+  "Зеленчукский район": [
+    "Зеленчукский район",
+    "Архыз",
+    "Зеленчукская",
+    "Нижний Архыз",
+    "Романтик",
+    "Кардоникская",
+    "Исправная",
+    "Сторожевая",
+    "Даусуз",
+    "Маруха",
+  ],
+}
+
 // @desc    Get active services (public, no auth)
 // @route   GET /api/services
 export const getServicesPublic = asyncHandler(async (req, res) => {
@@ -15,14 +50,17 @@ export const getServicesPublic = asyncHandler(async (req, res) => {
   ).filter(Boolean)
 
   const where = { isActive: true }
+  const andClauses = []
 
   if (search) {
-    where.OR = [
-      { title: { contains: search, mode: "insensitive" } },
-      { category: { contains: search, mode: "insensitive" } },
-      { shortDescription: { contains: search, mode: "insensitive" } },
-      { description: { contains: search, mode: "insensitive" } },
-    ]
+    andClauses.push({
+      OR: [
+        { title: { contains: search, mode: "insensitive" } },
+        { category: { contains: search, mode: "insensitive" } },
+        { shortDescription: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ],
+    })
   }
 
   if (categoriesArr.length > 0) {
@@ -31,6 +69,30 @@ export const getServicesPublic = asyncHandler(async (req, res) => {
 
   if (req.query.cardPayment === 'true') {
     where.cardPayment = true
+  }
+
+  // Фильтр по локации: матчинг метки (и её алиасов-сёл) по свободному тексту address
+  const locationsArr = arr(
+    req.query.locations ?? req.query["locations[]"] ?? req.query.location
+  ).filter(Boolean)
+
+  if (locationsArr.length > 0) {
+    const terms = [
+      ...new Set(
+        locationsArr.flatMap((loc) =>
+          Object.hasOwn(LOCATION_MATCH_ALIASES, loc) ? LOCATION_MATCH_ALIASES[loc] : [loc]
+        )
+      ),
+    ]
+    if (terms.length > 0) {
+      andClauses.push({
+        OR: terms.map((t) => ({ address: { contains: t, mode: "insensitive" } })),
+      })
+    }
+  }
+
+  if (andClauses.length > 0) {
+    where.AND = andClauses
   }
 
   // Определяем сортировку
