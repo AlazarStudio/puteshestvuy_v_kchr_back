@@ -30,6 +30,13 @@ const DEFAULT_CONTENT_BY_PAGE = {
       image: '/full_roates_bg.jpg',
     },
   },
+  gallery: {
+    hero: {
+      title: 'ФОТОБАНК РЕГИОНА',
+      description: 'Фотографии Карачаево-Черкесии, снятые путешественниками. Загрузите свои — они станут частью общей коллекции региона',
+      image: '/full_places_bg.jpg',
+    },
+  },
 }
 
 function deepMerge(target, source) {

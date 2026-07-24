@@ -43,7 +43,30 @@ async function convertImageFileToWebp(inputPath, outputPath) {
       withoutEnlargement: true,
     })
   }
-  await pipeline.webp({ quality: WEBP_QUALITY, effort: WEBP_EFFORT }).toFile(outputPath)
+  return pipeline.webp({ quality: WEBP_QUALITY, effort: WEBP_EFFORT }).toFile(outputPath)
+}
+
+/** Размеры изображения; при ошибке (например, SVG без явных размеров) — null */
+async function readImageSize(filePath) {
+  try {
+    const meta = await sharp(filePath).metadata()
+    return { width: meta.width ?? null, height: meta.height ?? null }
+  } catch (_) {
+    return { width: null, height: null }
+  }
+}
+
+/** Удаление файла из uploads по имени. basename — защита от выхода за каталог. */
+export function removeUploadedFile(filename) {
+  if (!filename) return
+  const filePath = path.join(uploadsDir, path.basename(String(filename)))
+  if (fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath)
+    } catch (_) {
+      /* ignore */
+    }
+  }
 }
 
 /**
@@ -54,7 +77,7 @@ async function convertImageFileToWebp(inputPath, outputPath) {
  * @param {string} uploadsDirAbs — абсолютный каталог uploads
  * @param {string} originalFilename — имя файла (basename), как выдал multer
  * @param {string} mimetype
- * @returns {Promise<{ filename: string, finalMimetype: string, size: number }>}
+ * @returns {Promise<{ filename: string, finalMimetype: string, size: number, width: number|null, height: number|null }>}
  */
 export async function finalizeUploadedImage(
   inputPath,
@@ -67,11 +90,13 @@ export async function finalizeUploadedImage(
 
   if (mimetype === "image/svg+xml") {
     const stat = fs.statSync(inputPath)
-    return { filename: basename, finalMimetype: mimetype, size: stat.size }
+    const { width, height } = await readImageSize(inputPath)
+    return { filename: basename, finalMimetype: mimetype, size: stat.size, width, height }
   }
   if (mimetype === "image/gif" || fileExt === ".gif") {
     const stat = fs.statSync(inputPath)
-    return { filename: basename, finalMimetype: mimetype, size: stat.size }
+    const { width, height } = await readImageSize(inputPath)
+    return { filename: basename, finalMimetype: mimetype, size: stat.size, width, height }
   }
 
   const parsed = path.parse(originalFilename || "file")
@@ -84,7 +109,7 @@ export async function finalizeUploadedImage(
     : webpPath
 
   try {
-    await convertImageFileToWebp(inputPath, writePath)
+    const info = await convertImageFileToWebp(inputPath, writePath)
     // Удаляем оригинал best-effort: на Windows файл может быть заблокирован антивирусом
     // try {
       // fs.unlinkSync(inputPath)
@@ -99,7 +124,13 @@ export async function finalizeUploadedImage(
       fs.renameSync(writePath, webpPath)
     }
     const stats = fs.statSync(webpPath)
-    return { filename: webpFilename, finalMimetype: "image/webp", size: stats.size }
+    return {
+      filename: webpFilename,
+      finalMimetype: "image/webp",
+      size: stats.size,
+      width: info?.width ?? null,
+      height: info?.height ?? null,
+    }
   } catch (error) {
     if (fs.existsSync(writePath)) {
       try {
@@ -110,6 +141,7 @@ export async function finalizeUploadedImage(
     }
     console.warn("Image conversion skipped, keeping original file:", error?.message || error)
     const stat = fs.statSync(inputPath)
-    return { filename: basename, finalMimetype: mimetype, size: stat.size }
+    const { width, height } = await readImageSize(inputPath)
+    return { filename: basename, finalMimetype: mimetype, size: stat.size, width, height }
   }
 }

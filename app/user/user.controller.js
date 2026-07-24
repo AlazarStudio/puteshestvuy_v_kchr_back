@@ -4,7 +4,7 @@ import fs from "fs"
 
 import { prisma } from "../prisma.js"
 import { UserFields } from "../utils/user.utils.js"
-import { uploadsDir, finalizeUploadedImage } from "../utils/imageUpload.js"
+import { uploadsDir, finalizeUploadedImage, removeUploadedFile } from "../utils/imageUpload.js"
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
@@ -95,22 +95,32 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
   res.json(updatedUser)
 })
 
-// @desc    Upload user avatar (та же логика WebP, что и admin/media/upload)
-// @route   POST /api/users/profile/avatar
-// @access  Private
-export const uploadUserAvatar = asyncHandler(async (req, res) => {
+/** Проверка загруженного файла; при ошибке удаляет временный файл */
+const ensureImageFile = (req, res) => {
   if (!req.file || !req.file.path) {
     res.status(400)
     throw new Error("Файл не загружен")
   }
-
-  const { path: inputPath, filename: originalFilename, mimetype } = req.file
-
-  if (!mimetype.startsWith("image/")) {
-    if (fs.existsSync(inputPath)) try { fs.unlinkSync(inputPath) } catch (_) {}
+  if (!req.file.mimetype.startsWith("image/")) {
+    if (fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path)
+      } catch (_) {
+        /* ignore */
+      }
+    }
     res.status(400)
     throw new Error("Недопустимый тип файла. Разрешены только изображения.")
   }
+}
+
+// @desc    Upload user avatar (та же логика WebP, что и admin/media/upload)
+// @route   POST /api/users/profile/avatar
+// @access  Private
+export const uploadUserAvatar = asyncHandler(async (req, res) => {
+  ensureImageFile(req, res)
+
+  const { path: inputPath, filename: originalFilename, mimetype } = req.file
 
   const { filename, finalMimetype } = await finalizeUploadedImage(
     inputPath,
@@ -131,6 +141,35 @@ export const uploadUserAvatar = asyncHandler(async (req, res) => {
     ...updatedUser,
     avatarMimeType: finalMimetype
   })
+})
+
+// @desc    Upload image for authorized user (фотобанк, предложения мест)
+// @route   POST /api/users/profile/media
+// @access  Private
+export const uploadUserMedia = asyncHandler(async (req, res) => {
+  ensureImageFile(req, res)
+
+  const { path: inputPath, filename: originalFilename, mimetype } = req.file
+
+  const { filename, finalMimetype, size, width, height } = await finalizeUploadedImage(
+    inputPath,
+    uploadsDir,
+    originalFilename,
+    mimetype
+  )
+
+  const url = `/uploads/${filename}`
+
+  try {
+    await prisma.media.create({
+      data: { filename, url, mimetype: finalMimetype, size }
+    })
+  } catch (error) {
+    removeUploadedFile(filename)
+    throw error
+  }
+
+  res.status(201).json({ url, filename, mimetype: finalMimetype, size, width, height })
 })
 
 const VALID_ENTITY_TYPES = ["route", "place", "service"]

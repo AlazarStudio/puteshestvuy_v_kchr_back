@@ -95,6 +95,14 @@ import {
   deleteSuggestion,
 } from "./suggestions.controller.js"
 
+import {
+  getGalleryPhotos,
+  getGalleryPendingCount,
+  updateGalleryPhoto,
+  bulkUpdateGalleryPhotos,
+  deleteGalleryPhoto,
+} from "./gallery.controller.js"
+
 const router = express.Router()
 
 // Разрешённые изображения: растры → WebP (GIF и SVG без перекодирования; WebP перекодируется)
@@ -283,5 +291,12 @@ router.put("/suggestions/:id", updateSuggestion)
 router.post("/suggestions/:id/approve", approveSuggestion)
 router.post("/suggestions/:id/confirm-approve", confirmApproveSuggestion)
 router.delete("/suggestions/:id", deleteSuggestion)
+
+// Gallery (фотобанк региона)
+router.get("/gallery/pending-count", getGalleryPendingCount)
+router.get("/gallery", getGalleryPhotos)
+router.post("/gallery/bulk", bulkUpdateGalleryPhotos)
+router.put("/gallery/:id", updateGalleryPhoto)
+router.delete("/gallery/:id", deleteGalleryPhoto)
 
 export default router

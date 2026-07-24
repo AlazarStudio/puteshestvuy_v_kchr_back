@@ -13,6 +13,7 @@ import {
   addFavorite,
   removeFavorite,
   uploadUserAvatar,
+  uploadUserMedia,
   getUserRoutes,
   getUserRouteById,
   createUserRoute,
@@ -42,6 +43,7 @@ router
   .put(protect, updateUserProfile)
 
 router.post("/profile/avatar", protect, upload.single("file"), uploadUserAvatar)
+router.post("/profile/media", protect, upload.single("file"), uploadUserMedia)
 
 router.get("/profile/favorites", protect, getFavorites)
 

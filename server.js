@@ -25,6 +25,7 @@ import footerPublicRoutes from "./app/footer/footer.routes.js"
 import homePublicRoutes from "./app/home/home.routes.js"
 import pagesPublicRoutes from "./app/pages/pages.routes.js"
 import suggestionsRoutes from "./app/suggestions/suggestions.routes.js"
+import galleryRoutes from "./app/gallery/gallery.routes.js"
 
 dotenv.config()
 
@@ -80,6 +81,7 @@ async function main() {
   app.use("/api/home", homePublicRoutes)
   app.use("/api/pages", pagesPublicRoutes)
   app.use("/api/suggestions", suggestionsRoutes)
+  app.use("/api/gallery", galleryRoutes)
 
   app.use(notFound)
   app.use(errorHandler)

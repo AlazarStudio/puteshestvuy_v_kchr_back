@@ -412,3 +412,33 @@ model BookingRequest {
 
   @@map("booking_requests")
 }
+
+// =============== ФОТОБАНК РЕГИОНА ===============
+
+model GalleryPhoto {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  status         String    @default("pending") // pending | approved | rejected
+  url            String
+  filename       String
+  size           Int?
+  width          Int?
+  height         Int?
+  authorCaption  String    @map("author_caption")
+  placeCaption   String    @map("place_caption")
+  placeId        String?   @map("place_id") @db.ObjectId
+  placeSlug      String?   @map("place_slug")
+  placeTitle     String?   @map("place_title")
+  uploadedById   String    @map("uploaded_by_id") @db.ObjectId
+  uploaderName   String?   @map("uploader_name")
+  uploaderEmail  String?   @map("uploader_email")
+  consentAt      DateTime  @map("consent_at")
+  consentVersion String    @map("consent_version")
+  adminComment   String?   @map("admin_comment")
+  moderatedAt    DateTime? @map("moderated_at")
+  moderatedById  String?   @map("moderated_by_id") @db.ObjectId
+  sortOrder      Int       @default(0) @map("sort_order")
+
+  @@map("gallery_photos")
+}
