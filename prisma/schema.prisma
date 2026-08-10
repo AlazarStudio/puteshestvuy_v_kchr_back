@@ -198,6 +198,34 @@ model News {
   @@map("news")
 }
 
+// =============== АФИША СОБЫТИЙ ===============
+
+model Event {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  title            String
+  slug             String    @unique
+  category         String?
+  startAt          DateTime  @map("start_at")
+  endAt            DateTime? @map("end_at")
+  location         String?
+  latitude         Float?
+  longitude        Float?
+  placeId          String?   @map("place_id") @db.ObjectId
+  shortDescription String?   @map("short_description")
+  blocks           Json? // [{ id, type, order, data }]
+  image            String? // обложка с кропом
+  images           String[] // фотогалерея
+  price            String? // свободный текст: «бесплатно», «от 500 ₽»
+  organizer        String?
+  registrationUrl  String?   @map("registration_url")
+  isActive         Boolean   @default(false) @map("is_active")
+  uniqueViewsCount Int       @default(0) @map("unique_views_count")
+
+  @@map("events")
+}
+
 // =============== УСЛУГИ И СЕРВИСЫ ===============
 
 model Service {

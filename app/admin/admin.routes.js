@@ -29,6 +29,14 @@ import {
 } from "./news.controller.js"
 
 import {
+  getEvents,
+  getEventById,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+} from "./events.controller.js"
+
+import {
   getServices,
   getServiceById,
   createService,
@@ -207,6 +215,13 @@ router.route("/news/:id")
   .get(getNewsById)
   .put(updateNews)
   .delete(deleteNews)
+
+// Events (афиша событий)
+router.get("/events", getEvents)
+router.get("/events/:id", getEventById)
+router.post("/events", createEvent)
+router.put("/events/:id", updateEvent)
+router.delete("/events/:id", deleteEvent)
 
 // Services (услуги)
 router.route("/services")
