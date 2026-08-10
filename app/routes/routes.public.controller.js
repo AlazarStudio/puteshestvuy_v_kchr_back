@@ -33,6 +33,7 @@ export const getRouteFiltersPublic = asyncHandler(async (req, res) => {
       hasOvernightOptions: [],
       extraGroups: [],
       fixedGroupMeta: {},
+      showPlacesOnCard: true,
     })
   }
   const extraGroups = getExtraGroupsFromConfig(config)
@@ -48,6 +49,7 @@ export const getRouteFiltersPublic = asyncHandler(async (req, res) => {
     hasOvernightOptions: Array.isArray(config.hasOvernightOptions) ? config.hasOvernightOptions : [],
     extraGroups,
     fixedGroupMeta,
+    showPlacesOnCard: config.showPlacesOnCard !== false,
   })
 })
 

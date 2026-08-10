@@ -11,6 +11,7 @@ const DEFAULT_CONFIG = {
   elevationOptions: ['до 500 м', '500–1000 м', '1000+ м'],
   isFamilyOptions: ['Да'],
   hasOvernightOptions: ['Да'],
+  showPlacesOnCard: true,
 }
 
 const FIXED_GROUP_KEYS = ['seasons', 'transport', 'durationOptions', 'difficultyLevels', 'distanceOptions', 'elevationOptions', 'isFamilyOptions', 'hasOvernightOptions']
@@ -68,19 +69,7 @@ export const getRouteFilters = asyncHandler(async (req, res) => {
     where: { id: 'default' },
   })
   if (!config) {
-    config = await prisma.routeFilterConfig.create({
-      data: {
-        id: 'default',
-        seasons: DEFAULT_CONFIG.seasons,
-        transport: DEFAULT_CONFIG.transport,
-        durationOptions: DEFAULT_CONFIG.durationOptions,
-        difficultyLevels: DEFAULT_CONFIG.difficultyLevels,
-        distanceOptions: DEFAULT_CONFIG.distanceOptions,
-        elevationOptions: DEFAULT_CONFIG.elevationOptions,
-        isFamilyOptions: DEFAULT_CONFIG.isFamilyOptions,
-        hasOvernightOptions: DEFAULT_CONFIG.hasOvernightOptions,
-      },
-    })
+    config = await prisma.routeFilterConfig.create({ data: { ...DEFAULT_CONFIG } })
   }
   const extraGroups = getExtraGroupsFromConfig(config)
   const fixedGroupMeta = config.fixedGroupMeta && typeof config.fixedGroupMeta === 'object' ? config.fixedGroupMeta : {}
@@ -98,6 +87,7 @@ export const getRouteFilters = asyncHandler(async (req, res) => {
     extraGroups,
     fixedGroupMeta,
     hiddenFixedGroups,
+    showPlacesOnCard: config.showPlacesOnCard !== false,
   }
   res.json(payload)
 })
@@ -137,6 +127,7 @@ export const updateRouteFilters = asyncHandler(async (req, res) => {
     extraGroups: extraGroups.length ? extraGroups : null,
     ...(req.body.fixedGroupMeta !== undefined && { fixedGroupMeta: Object.keys(fixedGroupMeta).length ? fixedGroupMeta : null }),
     ...(hiddenFixedGroups !== undefined && { hiddenFixedGroups }),
+    ...(req.body.showPlacesOnCard !== undefined && { showPlacesOnCard: Boolean(req.body.showPlacesOnCard) }),
   }
   const config = await prisma.routeFilterConfig.upsert({
     where: { id: 'default' },
@@ -442,4 +433,20 @@ export const removeRouteFilterValue = asyncHandler(async (req, res) => {
 
   const updated = await prisma.routeFilterConfig.findUnique({ where: { id: 'default' } })
   res.json({ ...updated, extraGroups: getExtraGroupsFromConfig(updated) })
+})
+
+// @desc    Update display-only settings of route cards
+// @route   PATCH /api/admin/route-filters/display
+export const updateRouteFilterDisplay = asyncHandler(async (req, res) => {
+  if (req.body.showPlacesOnCard === undefined) {
+    res.status(400)
+    throw new Error('Не передано ни одного поля для обновления')
+  }
+  const showPlacesOnCard = Boolean(req.body.showPlacesOnCard)
+  const config = await prisma.routeFilterConfig.upsert({
+    where: { id: 'default' },
+    create: { ...DEFAULT_CONFIG, showPlacesOnCard },
+    update: { showPlacesOnCard },
+  })
+  res.json({ showPlacesOnCard: config.showPlacesOnCard })
 })

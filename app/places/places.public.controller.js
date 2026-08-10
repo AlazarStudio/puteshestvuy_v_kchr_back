@@ -242,6 +242,8 @@ export const getPlaceByIdOrSlugPublic = asyncHandler(async (req, res) => {
           title: true,
           slug: true,
           location: true,
+          latitude: true,
+          longitude: true,
           shortDescription: true,
           rating: true,
           reviewsCount: true,

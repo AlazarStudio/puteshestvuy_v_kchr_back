@@ -72,6 +72,7 @@ import {
   updateRouteFilterGroupMeta,
   replaceRouteFilterValue,
   removeRouteFilterValue,
+  updateRouteFilterDisplay,
 } from "./route-filters.controller.js"
 
 import { getRegion, updateRegion } from "./region.controller.js"
@@ -266,6 +267,7 @@ router.post("/route-filters/remove-group", removeRouteFilterGroup)
 router.patch("/route-filters/group-meta", updateRouteFilterGroupMeta)
 router.post("/route-filters/replace-value", replaceRouteFilterValue)
 router.post("/route-filters/remove-value", removeRouteFilterValue)
+router.patch("/route-filters/display", updateRouteFilterDisplay)
 
 // Users (пользователи)
 router.route("/users")

@@ -106,7 +106,7 @@ model RoutePoint {
   @@map("route_points")
 }
 
-// Конфигурация фильтров маршрутов (группы и значения для сайта и формы маршрута)
+// Конфигурация фильтров маршрутов (группы и значения для сайта и формы маршрута) + настройки отображения карточек
 model RouteFilterConfig {
   id                  String   @id @default("default") @map("_id")
   seasons             String[]
@@ -120,6 +120,7 @@ model RouteFilterConfig {
   extraGroups         Json?    @map("extra_groups") // [{ key, label, icon?, iconType?, values }]
   fixedGroupMeta      Json?    @map("fixed_group_meta") // { "seasons": { label?, icon?, iconType? }, ... }
   hiddenFixedGroups   Json?    @map("hidden_fixed_groups") // ["seasons", ...] — скрытые встроенные группы
+  showPlacesOnCard    Boolean  @default(true) @map("show_places_on_card") // показывать блок точек на карточке маршрута
   updatedAt           DateTime @updatedAt @map("updated_at")
 
   @@map("route_filter_config")
