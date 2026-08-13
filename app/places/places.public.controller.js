@@ -37,20 +37,21 @@ export const getPlaceFiltersPublic = asyncHandler(async (req, res) => {
   })
 })
 
-// @desc    Get active places (public, no auth)
-// @route   GET /api/places
-export const getPlacesPublic = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1
-  const limit = Math.min(parseInt(req.query.limit) || 12, 100)
-  const skip = (page - 1) * limit
-  const search = (req.query.search || '').trim()
-  const byLocation = (req.query.byLocation || '').trim()
-
+/**
+ * Собирает условие выборки мест из query-параметров.
+ * Общая для списка и случайного места: иначе они разъедутся, и показанное
+ * пользователю число подходящих начнёт врать.
+ * @returns {Promise<object>} where для prisma.place
+ */
+const buildPlacesWhere = async (query) => {
   const arr = (v) => (v == null ? [] : Array.isArray(v) ? v : [v])
-  const directionsArr = arr(req.query.directions || req.query['directions[]']).filter(Boolean)
-  const seasonsArr = arr(req.query.seasons || req.query['seasons[]']).filter(Boolean)
-  const objectTypesArr = arr(req.query.objectTypes || req.query['objectTypes[]']).filter(Boolean)
-  const accessibilityArr = arr(req.query.accessibility || req.query['accessibility[]']).filter(Boolean)
+  const search = (query.search || '').trim()
+  const byLocation = (query.byLocation || '').trim()
+
+  const directionsArr = arr(query.directions || query['directions[]']).filter(Boolean)
+  const seasonsArr = arr(query.seasons || query['seasons[]']).filter(Boolean)
+  const objectTypesArr = arr(query.objectTypes || query['objectTypes[]']).filter(Boolean)
+  const accessibilityArr = arr(query.accessibility || query['accessibility[]']).filter(Boolean)
 
   // Получаем конфиг для extraGroups
   const config = await prisma.placeFilterConfig.findUnique({
@@ -89,7 +90,7 @@ export const getPlacesPublic = asyncHandler(async (req, res) => {
   const customFilterQuery = {}
   for (const g of extraGroups) {
     if (!g.key) continue
-    const valuesArr = arr(req.query[g.key] || req.query[`${g.key}[]`]).filter(Boolean)
+    const valuesArr = arr(query[g.key] || query[`${g.key}[]`]).filter(Boolean)
     if (valuesArr.length > 0) {
       customFilterQuery[`custom_filters.${g.key}`] = valuesArr.length === 1
         ? valuesArr[0]
@@ -107,6 +108,18 @@ export const getPlacesPublic = asyncHandler(async (req, res) => {
     })
     where.id = { in: matchingIds }
   }
+
+  return where
+}
+
+// @desc    Get active places (public, no auth)
+// @route   GET /api/places
+export const getPlacesPublic = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1
+  const limit = Math.min(parseInt(req.query.limit) || 12, 100)
+  const skip = (page - 1) * limit
+
+  const where = await buildPlacesWhere(req.query)
 
   // Определяем сортировку
   const sortBy = (req.query.sortBy || 'createdAt').toLowerCase()
@@ -317,18 +330,8 @@ export const createPlaceReview = asyncHandler(async (req, res) => {
 // @desc    Случайное активное место с необязательными условиями
 // @route   GET /api/places/random
 export const getRandomPlacePublic = asyncHandler(async (req, res) => {
-  const asArray = (value) => {
-    if (!value) return []
-    return Array.isArray(value) ? value : [value]
-  }
-
-  const directions = asArray(req.query.directions).filter(Boolean)
-  const seasons = asArray(req.query.seasons).filter(Boolean)
   const exclude = (req.query.exclude || '').trim()
-
-  const where = { isActive: true }
-  if (directions.length) where.directions = { hasSome: directions }
-  if (seasons.length) where.seasons = { hasSome: seasons }
+  const where = await buildPlacesWhere(req.query)
 
   // Сначала считаем по условиям без исключения: если подходящее место
   // ровно одно, исключать нечего и надо вернуть его же, а не 404
@@ -339,7 +342,12 @@ export const getRandomPlacePublic = asyncHandler(async (req, res) => {
     throw new Error('Под эти условия не подошло ни одного места')
   }
 
-  const whereFinal = total > 1 && exclude ? { ...where, id: { not: exclude } } : where
+  // Исключение кладётся в AND, а не в where.id: при выбранных дополнительных
+  // группах в where.id уже лежит сужение { in: [...] }, и простая подстановка
+  // затёрла бы его, расширив выборку
+  const whereFinal = total > 1 && exclude
+    ? { ...where, AND: [...(where.AND || []), { id: { not: exclude } }] }
+    : where
   const count = await prisma.place.count({ where: whereFinal })
 
   const [place] = await prisma.place.findMany({
