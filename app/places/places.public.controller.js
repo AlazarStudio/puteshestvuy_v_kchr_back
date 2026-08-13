@@ -313,3 +313,40 @@ export const createPlaceReview = asyncHandler(async (req, res) => {
 
   res.status(201).json(review)
 })
+
+// @desc    Случайное активное место с необязательными условиями
+// @route   GET /api/places/random
+export const getRandomPlacePublic = asyncHandler(async (req, res) => {
+  const asArray = (value) => {
+    if (!value) return []
+    return Array.isArray(value) ? value : [value]
+  }
+
+  const directions = asArray(req.query.directions).filter(Boolean)
+  const seasons = asArray(req.query.seasons).filter(Boolean)
+  const exclude = (req.query.exclude || '').trim()
+
+  const where = { isActive: true }
+  if (directions.length) where.directions = { hasSome: directions }
+  if (seasons.length) where.seasons = { hasSome: seasons }
+
+  // Сначала считаем по условиям без исключения: если подходящее место
+  // ровно одно, исключать нечего и надо вернуть его же, а не 404
+  const total = await prisma.place.count({ where })
+
+  if (total === 0) {
+    res.status(404)
+    throw new Error('Под эти условия не подошло ни одного места')
+  }
+
+  const whereFinal = total > 1 && exclude ? { ...where, id: { not: exclude } } : where
+  const count = await prisma.place.count({ where: whereFinal })
+
+  const [place] = await prisma.place.findMany({
+    where: whereFinal,
+    skip: Math.floor(Math.random() * count),
+    take: 1,
+  })
+
+  res.json(place)
+})

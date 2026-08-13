@@ -4,6 +4,7 @@ import {
   getPlacesPublic,
   getPlaceByIdOrSlugPublic,
   createPlaceReview,
+  getRandomPlacePublic,
 } from "./places.public.controller.js"
 import { visitor } from "../middleware/visitor.middleware.js"
 
@@ -11,6 +12,7 @@ const router = express.Router()
 
 router.get("/", getPlacesPublic)
 router.get("/filters", getPlaceFiltersPublic)
+router.get("/random", getRandomPlacePublic)
 router.post("/:placeId/reviews", createPlaceReview)
 router.get("/:idOrSlug", visitor, getPlaceByIdOrSlugPublic)
 
