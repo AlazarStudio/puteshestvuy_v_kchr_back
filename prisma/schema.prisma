@@ -366,6 +366,30 @@ model PlaceSuggestion {
   @@map("place_suggestions")
 }
 
+model EventSuggestion {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  status           String    @default("pending") // pending | in_review | approved | rejected
+  submittedById    String    @map("submitted_by_id") @db.ObjectId
+  submitterName    String?   @map("submitter_name")
+  submitterEmail   String?   @map("submitter_email")
+  adminComment     String?   @map("admin_comment")
+  approvedEventId  String?   @map("approved_event_id") @db.ObjectId
+  title            String
+  startAt          DateTime  @map("start_at")
+  endAt            DateTime? @map("end_at")
+  location         String?
+  shortDescription String?   @map("short_description")
+  description      String?
+  organizer        String?
+  price            String?
+  registrationUrl  String?   @map("registration_url")
+  image            String?
+
+  @@map("event_suggestions")
+}
+
 // =============== МЕДИА ===============
 
 model Media {

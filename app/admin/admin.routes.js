@@ -105,6 +105,16 @@ import {
 } from "./suggestions.controller.js"
 
 import {
+  getEventSuggestions,
+  getEventSuggestionsPendingCount,
+  getEventSuggestionById,
+  updateEventSuggestion,
+  approveEventSuggestion,
+  confirmApproveEventSuggestion,
+  deleteEventSuggestion,
+} from "./event-suggestions.controller.js"
+
+import {
   getGalleryPhotos,
   getGalleryPendingCount,
   updateGalleryPhoto,
@@ -308,6 +318,15 @@ router.put("/suggestions/:id", updateSuggestion)
 router.post("/suggestions/:id/approve", approveSuggestion)
 router.post("/suggestions/:id/confirm-approve", confirmApproveSuggestion)
 router.delete("/suggestions/:id", deleteSuggestion)
+
+// Event suggestions (предложения событий)
+router.get("/event-suggestions/pending-count", getEventSuggestionsPendingCount)
+router.get("/event-suggestions", getEventSuggestions)
+router.get("/event-suggestions/:id", getEventSuggestionById)
+router.put("/event-suggestions/:id", updateEventSuggestion)
+router.post("/event-suggestions/:id/approve", approveEventSuggestion)
+router.post("/event-suggestions/:id/confirm-approve", confirmApproveEventSuggestion)
+router.delete("/event-suggestions/:id", deleteEventSuggestion)
 
 // Gallery (фотобанк региона)
 router.get("/gallery/pending-count", getGalleryPendingCount)
