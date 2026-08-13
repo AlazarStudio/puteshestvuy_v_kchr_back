@@ -172,11 +172,78 @@ export const uploadUserMedia = asyncHandler(async (req, res) => {
   res.status(201).json({ url, filename, mimetype: finalMimetype, size, width, height })
 })
 
-const VALID_ENTITY_TYPES = ["route", "place", "service"]
-const ENTITY_KEY_MAP = {
+const FAVORITE_ENTITY_TYPES = ["route", "place", "service"]
+const FAVORITE_KEY_MAP = {
   route: "favoriteRouteIds",
   place: "favoritePlaceIds",
   service: "favoriteServiceIds"
+}
+
+const VISITED_ENTITY_TYPES = ["route", "place"]
+const VISITED_KEY_MAP = {
+  route: "visitedRouteIds",
+  place: "visitedPlaceIds"
+}
+
+const ENTITY_MODEL_MAP = {
+  route: "route",
+  place: "place",
+  service: "service"
+}
+
+const ENTITY_LABEL_MAP = {
+  route: "Route",
+  place: "Place",
+  service: "Service"
+}
+
+// Общая механика списков идентификаторов в профиле. Избранное и посещённое
+// различаются только набором допустимых типов и картой полей, поэтому
+// алгоритм здесь один, а не четыре копии в четырёх ручках.
+const updateUserIdList = async ({ req, res, entityTypes, keyMap, mode }) => {
+  const { entityType, entityId } = req.params
+
+  if (!entityTypes.includes(entityType)) {
+    res.status(400)
+    throw new Error(`Invalid entity type. Use ${entityTypes.join(", ")}`)
+  }
+
+  const key = keyMap[entityType]
+
+  if (mode === "add") {
+    const exists = await prisma[ENTITY_MODEL_MAP[entityType]].findUnique({
+      where: { id: entityId }
+    })
+    if (!exists) {
+      res.status(404)
+      throw new Error(`${ENTITY_LABEL_MAP[entityType]} not found`)
+    }
+  }
+
+  const current = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { [key]: true }
+  })
+  const ids = Array.isArray(current?.[key]) ? current[key] : []
+
+  // Повторное добавление — не ошибка: отдаём профиль как есть
+  if (mode === "add" && ids.includes(entityId)) {
+    const userFull = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: UserFields
+    })
+    return res.json(userFull)
+  }
+
+  const nextIds =
+    mode === "add" ? [...ids, entityId] : ids.filter((id) => id !== entityId)
+
+  const updated = await prisma.user.update({
+    where: { id: req.user.id },
+    data: { [key]: nextIds },
+    select: UserFields
+  })
+  res.json(updated)
 }
 
 // @desc    Get user favorites
@@ -225,82 +292,54 @@ export const updateConstructorPoints = asyncHandler(async (req, res) => {
 // @desc    Add to favorites
 // @route   POST /api/users/favorites/:entityType/:entityId
 // @access  Private
-export const addFavorite = asyncHandler(async (req, res) => {
-  const { entityType, entityId } = req.params
-  if (!VALID_ENTITY_TYPES.includes(entityType)) {
-    res.status(400)
-    throw new Error("Invalid entity type. Use route, place, or service")
-  }
-
-  const key = ENTITY_KEY_MAP[entityType]
-
-  if (entityType === "route") {
-    const exists = await prisma.route.findUnique({ where: { id: entityId } })
-    if (!exists) {
-      res.status(404)
-      throw new Error("Route not found")
-    }
-  } else if (entityType === "place") {
-    const exists = await prisma.place.findUnique({ where: { id: entityId } })
-    if (!exists) {
-      res.status(404)
-      throw new Error("Place not found")
-    }
-  } else if (entityType === "service") {
-    const exists = await prisma.service.findUnique({ where: { id: entityId } })
-    if (!exists) {
-      res.status(404)
-      throw new Error("Service not found")
-    }
-  }
-
-  const current = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    select: { [key]: true }
+export const addFavorite = asyncHandler((req, res) =>
+  updateUserIdList({
+    req,
+    res,
+    entityTypes: FAVORITE_ENTITY_TYPES,
+    keyMap: FAVORITE_KEY_MAP,
+    mode: "add"
   })
-  const ids = Array.isArray(current[key]) ? current[key] : []
-  if (ids.includes(entityId)) {
-    const userFull = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: UserFields
-    })
-    return res.json(userFull)
-  }
-
-  const newIds = [...ids, entityId]
-  const updated = await prisma.user.update({
-    where: { id: req.user.id },
-    data: { [key]: newIds },
-    select: UserFields
-  })
-  res.json(updated)
-})
+)
 
 // @desc    Remove from favorites
 // @route   DELETE /api/users/favorites/:entityType/:entityId
 // @access  Private
-export const removeFavorite = asyncHandler(async (req, res) => {
-  const { entityType, entityId } = req.params
-  if (!VALID_ENTITY_TYPES.includes(entityType)) {
-    res.status(400)
-    throw new Error("Invalid entity type. Use route, place, or service")
-  }
-
-  const key = ENTITY_KEY_MAP[entityType]
-
-  const current = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    select: { [key]: true }
+export const removeFavorite = asyncHandler((req, res) =>
+  updateUserIdList({
+    req,
+    res,
+    entityTypes: FAVORITE_ENTITY_TYPES,
+    keyMap: FAVORITE_KEY_MAP,
+    mode: "remove"
   })
-  const ids = Array.isArray(current[key]) ? current[key].filter((id) => id !== entityId) : []
+)
 
-  const updated = await prisma.user.update({
-    where: { id: req.user.id },
-    data: { [key]: ids },
-    select: UserFields
+// @desc    Отметить место или маршрут как посещённые
+// @route   POST /api/users/visited/:entityType/:entityId
+// @access  Private
+export const addVisited = asyncHandler((req, res) =>
+  updateUserIdList({
+    req,
+    res,
+    entityTypes: VISITED_ENTITY_TYPES,
+    keyMap: VISITED_KEY_MAP,
+    mode: "add"
   })
-  res.json(updated)
-})
+)
+
+// @desc    Снять отметку о посещении
+// @route   DELETE /api/users/visited/:entityType/:entityId
+// @access  Private
+export const removeVisited = asyncHandler((req, res) =>
+  updateUserIdList({
+    req,
+    res,
+    entityTypes: VISITED_ENTITY_TYPES,
+    keyMap: VISITED_KEY_MAP,
+    mode: "remove"
+  })
+)
 
 // =============== ПОЛЬЗОВАТЕЛЬСКИЕ МАРШРУТЫ ===============
 

@@ -12,6 +12,8 @@ import {
   updateConstructorPoints,
   addFavorite,
   removeFavorite,
+  addVisited,
+  removeVisited,
   uploadUserAvatar,
   uploadUserMedia,
   getUserRoutes,
@@ -52,6 +54,9 @@ router.put("/constructor-points", protect, updateConstructorPoints)
 
 router.post("/favorites/:entityType/:entityId", protect, addFavorite)
 router.delete("/favorites/:entityType/:entityId", protect, removeFavorite)
+
+router.post("/visited/:entityType/:entityId", protect, addVisited)
+router.delete("/visited/:entityType/:entityId", protect, removeVisited)
 
 // Пользовательские маршруты
 router

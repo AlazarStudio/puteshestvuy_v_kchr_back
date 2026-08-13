@@ -52,6 +52,8 @@ model User {
   favoritePlaceIds    String[]         @default([]) @map("favorite_place_ids") @db.ObjectId
   favoriteServiceIds  String[]         @default([]) @map("favorite_service_ids") @db.ObjectId
   constructorPlaceIds String[]         @default([]) @map("constructor_place_ids") @db.ObjectId
+  visitedPlaceIds     String[]         @default([]) @map("visited_place_ids") @db.ObjectId
+  visitedRouteIds     String[]         @default([]) @map("visited_route_ids") @db.ObjectId
   userRoutes          UserRoute[]
 }
 

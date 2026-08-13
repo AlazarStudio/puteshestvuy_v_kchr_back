@@ -13,5 +13,7 @@ export const UserFields = {
   favoriteRouteIds: true,
   favoritePlaceIds: true,
   favoriteServiceIds: true,
-  constructorPlaceIds: true
+  constructorPlaceIds: true,
+  visitedPlaceIds: true,
+  visitedRouteIds: true
 }
