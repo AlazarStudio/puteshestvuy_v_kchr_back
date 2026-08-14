@@ -40,7 +40,7 @@ const LOCATION_MATCH_ALIASES = {
 // @desc    Get active services (public, no auth)
 // @route   GET /api/services
 export const getServicesPublic = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1
+  const page = Math.max(1, parseInt(req.query.page) || 1)
   const limit = parsePageLimit(req.query.limit, 100)
   const skip = (page - 1) * limit
   const search = (req.query.search || "").trim()

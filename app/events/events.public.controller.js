@@ -16,7 +16,7 @@ const upcomingWhere = (now) => ({
 // @desc    Get upcoming active events (public, no auth)
 // @route   GET /api/events
 export const getEventsPublic = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1
+  const page = Math.max(1, parseInt(req.query.page) || 1)
   const limit = parsePageLimit(req.query.limit, 12)
   const skip = (page - 1) * limit
   const category = (req.query.category || '').trim()

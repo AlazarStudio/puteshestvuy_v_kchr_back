@@ -57,7 +57,7 @@ export const getRouteFiltersPublic = asyncHandler(async (req, res) => {
 // @desc    Get active routes (public, no auth)
 // @route   GET /api/routes
 export const getRoutesPublic = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1
+  const page = Math.max(1, parseInt(req.query.page) || 1)
   const limit = parsePageLimit(req.query.limit, 12)
   const skip = (page - 1) * limit
   const search = (req.query.search || '').trim()
