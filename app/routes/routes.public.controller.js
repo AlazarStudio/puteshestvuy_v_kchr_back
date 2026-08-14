@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
 import { parsePageLimit } from "../utils/validators.js"
+import { findApprovedReviews } from "../utils/rating.js"
 
 
 function getExtraGroupsFromConfig(config) {
@@ -228,10 +229,6 @@ export const getRouteByIdOrSlugPublic = asyncHandler(async (req, res) => {
       : { slug: idOrSlug, isActive: true },
     include: {
       points: { orderBy: { order: 'asc' } },
-      reviews: {
-        where: { status: 'approved' },
-        orderBy: { createdAt: 'desc' },
-      },
     },
   })
 
@@ -351,6 +348,7 @@ export const getRouteByIdOrSlugPublic = asyncHandler(async (req, res) => {
     places,
     guides,
     nearbyPlaces,
+    reviews: await findApprovedReviews('route', route.id),
   }
   res.json(normalized)
 })

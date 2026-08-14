@@ -81,6 +81,8 @@ model Route {
   isActive         Boolean      @default(true) @map("is_active")
   rating           Float?       @default(0)
   reviewsCount     Int          @default(0) @map("reviews_count")
+  manualRating     Float?       @map("manual_rating")
+  ratingSource     String       @default("reviews") @map("rating_source") // reviews | manual
   uniqueViewsCount Int          @default(0) @map("unique_views_count")
   images           String[] // массив URL изображений
   points           RoutePoint[]
@@ -148,6 +150,8 @@ model Place {
   video            String?
   rating           Float?   @default(0)
   reviewsCount     Int      @default(0) @map("reviews_count")
+  manualRating     Float?   @map("manual_rating")
+  ratingSource     String   @default("reviews") @map("rating_source") // reviews | manual
   uniqueViewsCount Int      @default(0) @map("unique_views_count")
   isActive         Boolean  @default(true) @map("is_active")
   image            String? // превью (обложка), одна картинка с кропом
@@ -247,6 +251,8 @@ model Service {
   longitude        Float? // долгота для карты
   rating           Float?         @default(0)
   reviewsCount     Int            @default(0) @map("reviews_count")
+  manualRating     Float?         @map("manual_rating")
+  ratingSource     String         @default("reviews") @map("rating_source") // reviews | manual
   uniqueViewsCount Int            @default(0) @map("unique_views_count")
   isVerified       Boolean        @default(false) @map("is_verified")
   isActive         Boolean        @default(true) @map("is_active")

@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
 import { normalizeYandexMapUrl } from '../utils/yandexMap.js'
+import { buildRatingUpdate, findApprovedReviews, updateEntityRating } from '../utils/rating.js'
 
 const generateSlug = (title) => {
   return title
@@ -87,10 +88,6 @@ export const getRouteById = asyncHandler(async (req, res) => {
     where: { id: req.params.id },
     include: {
       points: { orderBy: { order: 'asc' } },
-      reviews: {
-        where: { status: 'approved' },
-        orderBy: { createdAt: 'desc' },
-      },
     },
   })
 
@@ -106,6 +103,7 @@ export const getRouteById = asyncHandler(async (req, res) => {
     nearbyPlaceIds: Array.isArray(route.nearbyPlaceIds) ? route.nearbyPlaceIds : [],
     guideIds: Array.isArray(route.guideIds) ? route.guideIds : [],
     similarRouteIds: Array.isArray(route.similarRouteIds) ? route.similarRouteIds : [],
+    reviews: await findApprovedReviews('route', route.id),
   }
   res.json(normalized)
 })
@@ -146,8 +144,15 @@ export const createRoute = asyncHandler(async (req, res) => {
 
   const slug = generateSlug(title) + '-' + Date.now()
 
+  const ratingUpdate = buildRatingUpdate(req.body)
+  if (ratingUpdate.error) {
+    res.status(400)
+    throw new Error(ratingUpdate.error)
+  }
+
   const route = await prisma.route.create({
     data: {
+      ...ratingUpdate.data,
       title,
       slug,
       shortDescription,
@@ -242,6 +247,13 @@ export const updateRoute = asyncHandler(async (req, res) => {
     customFilters: body.customFilters !== undefined ? (body.customFilters && typeof body.customFilters === 'object' ? body.customFilters : null) : existing.customFilters,
   }
 
+  const ratingUpdate = buildRatingUpdate(body, existing)
+  if (ratingUpdate.error) {
+    res.status(400)
+    throw new Error(ratingUpdate.error)
+  }
+  Object.assign(updateData, ratingUpdate.data)
+
   await prisma.route.update({
     where: { id: req.params.id },
     data: updateData,
@@ -261,6 +273,10 @@ export const updateRoute = asyncHandler(async (req, res) => {
         })),
       })
     }
+  }
+
+  if (ratingUpdate.recalcFromReviews) {
+    await updateEntityRating('route', req.params.id)
   }
 
   const route = await prisma.route.findUnique({

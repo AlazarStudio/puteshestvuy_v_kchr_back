@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
+import { buildRatingUpdate, findApprovedReviews, updateEntityRating } from "../utils/rating.js"
 
 const generateSlug = (title) => {
   return title
@@ -87,12 +88,6 @@ export const getPlaces = asyncHandler(async (req, res) => {
 export const getPlaceById = asyncHandler(async (req, res) => {
   const place = await prisma.place.findUnique({
     where: { id: req.params.id },
-    include: {
-      reviews: {
-        where: { status: 'approved' },
-        orderBy: { createdAt: 'desc' },
-      },
-    },
   })
 
   if (!place) {
@@ -103,6 +98,7 @@ export const getPlaceById = asyncHandler(async (req, res) => {
   const safePlace = {
     ...place,
     nearbyPlaceIds: Array.isArray(place.nearbyPlaceIds) ? place.nearbyPlaceIds : [],
+    reviews: await findApprovedReviews('place', place.id),
   }
   res.json(safePlace)
 })
@@ -179,8 +175,15 @@ export const createPlace = asyncHandler(async (req, res) => {
   const slug = generateSlug(title) + '-' + Date.now()
   const nearby = nearbyPlaceIds || []
 
+  const ratingUpdate = buildRatingUpdate(req.body)
+  if (ratingUpdate.error) {
+    res.status(400)
+    throw new Error(ratingUpdate.error)
+  }
+
   const place = await prisma.place.create({
     data: {
+      ...ratingUpdate.data,
       title,
       slug,
       location,
@@ -274,6 +277,13 @@ export const updatePlace = asyncHandler(async (req, res) => {
   const newNearby = nearbyPlaceIds !== undefined ? nearbyPlaceIds : existing.nearbyPlaceIds
   const existingNearby = Array.isArray(existing.nearbyPlaceIds) ? existing.nearbyPlaceIds : []
 
+  const ratingUpdate = buildRatingUpdate(req.body, existing)
+  if (ratingUpdate.error) {
+    res.status(400)
+    throw new Error(ratingUpdate.error)
+  }
+  Object.assign(data, ratingUpdate.data)
+
   const place = await prisma.place.update({
     where: { id: req.params.id },
     data,
@@ -281,6 +291,13 @@ export const updatePlace = asyncHandler(async (req, res) => {
 
   if (nearbyPlaceIds !== undefined) {
     await syncNearbyPlaceIdsBidirectional(req.params.id, newNearby, existingNearby)
+  }
+
+  if (ratingUpdate.recalcFromReviews) {
+    await updateEntityRating('place', req.params.id)
+    const refreshed = await prisma.place.findUnique({ where: { id: req.params.id } })
+    res.json(refreshed)
+    return
   }
 
   res.json(place)

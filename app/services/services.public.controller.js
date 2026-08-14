@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
 import { parsePageLimit, warnIfListOutgrewLimit } from "../utils/validators.js"
+import { findApprovedReviews } from "../utils/rating.js"
 
 // Совпадение метки локации (фильтр гостиниц/ресторанов) с текстом поля address.
 // Ключи должны совпадать с SERVICE_LOCATION_OPTIONS на фронте.
@@ -99,11 +100,24 @@ export const getServicesPublic = asyncHandler(async (req, res) => {
   // Определяем сортировку
   const sortBy = (req.query.sortBy || 'createdAt').toLowerCase()
   const hotelSelected = categoriesArr.includes('Гостиница')
+  // при выбранной категории «Гостиница» первым ключом всегда идёт оплата картой
+  const withHotelFirst = (keys) => (hotelSelected ? [{ cardPayment: 'desc' }, ...keys] : keys)
   let orderBy
   if (sortBy === 'popularity') {
-    orderBy = hotelSelected
-      ? [{ cardPayment: 'desc' }, { uniqueViewsCount: 'desc' }, { createdAt: 'desc' }]
-      : [{ uniqueViewsCount: 'desc' }, { createdAt: 'desc' }]
+    orderBy = withHotelFirst([{ uniqueViewsCount: 'desc' }, { createdAt: 'desc' }])
+  } else if (sortBy === 'rating') {
+    orderBy = withHotelFirst([
+      { rating: 'desc' },
+      { reviewsCount: 'desc' },
+      { uniqueViewsCount: 'desc' },
+      { createdAt: 'desc' },
+    ])
+  } else if (sortBy === 'reviews') {
+    orderBy = withHotelFirst([
+      { reviewsCount: 'desc' },
+      { rating: 'desc' },
+      { createdAt: 'desc' },
+    ])
   } else {
     orderBy = hotelSelected
       ? [{ cardPayment: 'desc' }, { createdAt: 'desc' }]
@@ -147,12 +161,6 @@ export const getServiceByIdOrSlugPublic = asyncHandler(async (req, res) => {
     where: {
       isActive: true,
       ...(isObjectId ? { id: idOrSlug } : { slug: idOrSlug }),
-    },
-    include: {
-      reviews: {
-        where: { status: "approved" },
-        orderBy: { createdAt: "desc" },
-      },
     },
   })
 
@@ -259,6 +267,7 @@ export const getServiceByIdOrSlugPublic = asyncHandler(async (req, res) => {
     ...service,
     routeIds,
     routes,
+    reviews: await findApprovedReviews('service', service.id),
   })
 })
 

@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
 import { parsePageLimit, warnIfListOutgrewLimit } from "../utils/validators.js"
+import { findApprovedReviews } from "../utils/rating.js"
 
 
 function getExtraGroupsFromConfig(config) {
@@ -127,6 +128,15 @@ export const getPlacesPublic = asyncHandler(async (req, res) => {
   let orderBy
   if (sortBy === 'popularity') {
     orderBy = { uniqueViewsCount: 'desc' }
+  } else if (sortBy === 'rating') {
+    // хвост вторичных ключей обязателен: объектов без рейтинга много,
+    // без него они легли бы в произвольном и неустойчивом порядке
+    orderBy = [
+      { rating: 'desc' },
+      { reviewsCount: 'desc' },
+      { uniqueViewsCount: 'desc' },
+      { createdAt: 'desc' },
+    ]
   } else {
     orderBy = { createdAt: 'desc' }
   }
@@ -165,12 +175,6 @@ export const getPlaceByIdOrSlugPublic = asyncHandler(async (req, res) => {
   const isObjectId = /^[a-f\d]{24}$/i.test(idOrSlug)
   const place = await prisma.place.findFirst({
     where: isObjectId ? { id: idOrSlug, isActive: true } : { slug: idOrSlug, isActive: true },
-    include: {
-      reviews: {
-        where: { status: 'approved' },
-        orderBy: { createdAt: 'desc' },
-      },
-    },
   })
 
   if (!place) {
@@ -277,6 +281,7 @@ export const getPlaceByIdOrSlugPublic = asyncHandler(async (req, res) => {
       ...p,
       image: p.image || p.images?.[0] || null,
     })),
+    reviews: await findApprovedReviews('place', place.id),
   }
 
   res.json(safePlace)

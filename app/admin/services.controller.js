@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
+import { buildRatingUpdate, findApprovedReviews, updateEntityRating } from "../utils/rating.js"
 
 const generateSlug = (title) => {
   return title
@@ -87,12 +88,6 @@ export const getServices = asyncHandler(async (req, res) => {
 export const getServiceById = asyncHandler(async (req, res) => {
   const service = await prisma.service.findUnique({
     where: { id: req.params.id },
-    include: {
-      reviews: {
-        where: { status: 'approved' },
-        orderBy: { createdAt: 'desc' },
-      },
-    },
   })
 
   if (!service) {
@@ -100,7 +95,10 @@ export const getServiceById = asyncHandler(async (req, res) => {
     throw new Error('Услуга не найдена')
   }
 
-  res.json(service)
+  res.json({
+    ...service,
+    reviews: await findApprovedReviews('service', service.id),
+  })
 })
 
 // @desc    Create service
@@ -134,8 +132,15 @@ export const createService = asyncHandler(async (req, res) => {
 
   const slug = generateSlug(title) + '-' + Date.now()
 
+  const ratingUpdate = buildRatingUpdate(req.body)
+  if (ratingUpdate.error) {
+    res.status(400)
+    throw new Error(ratingUpdate.error)
+  }
+
   const service = await prisma.service.create({
     data: {
+      ...ratingUpdate.data,
       title,
       slug,
       category,
@@ -198,10 +203,24 @@ export const updateService = asyncHandler(async (req, res) => {
   if (req.body.prices !== undefined) updateData.prices = req.body.prices
   if (req.body.data !== undefined) updateData.data = req.body.data != null && typeof req.body.data === 'object' ? req.body.data : null
 
+  const ratingUpdate = buildRatingUpdate(req.body, existing)
+  if (ratingUpdate.error) {
+    res.status(400)
+    throw new Error(ratingUpdate.error)
+  }
+  Object.assign(updateData, ratingUpdate.data)
+
   const service = await prisma.service.update({
     where: { id: req.params.id },
     data: updateData,
   })
+
+  if (ratingUpdate.recalcFromReviews) {
+    await updateEntityRating('service', req.params.id)
+    const refreshed = await prisma.service.findUnique({ where: { id: req.params.id } })
+    res.json(refreshed)
+    return
+  }
 
   res.json(service)
 })

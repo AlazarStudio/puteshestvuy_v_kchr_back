@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
+import { updateEntityRating } from "../utils/rating.js"
 
 // @desc    Get reviews with pagination
 // @route   GET /api/admin/reviews
@@ -184,46 +185,3 @@ export const deleteReview = asyncHandler(async (req, res) => {
 
   res.json({ message: 'Отзыв удалён' })
 })
-
-// Вспомогательная функция для обновления рейтинга
-async function updateEntityRating(entityType, entityId) {
-  const reviews = await prisma.review.findMany({
-    where: {
-      entityType,
-      entityId,
-      status: 'approved',
-    },
-    select: { rating: true },
-  })
-
-  const count = reviews.length
-  const avgRating = count > 0 
-    ? reviews.reduce((sum, r) => sum + r.rating, 0) / count 
-    : 0
-
-  const updateData = {
-    rating: Math.round(avgRating * 10) / 10,
-    reviewsCount: count,
-  }
-
-  switch (entityType) {
-    case 'route':
-      await prisma.route.update({
-        where: { id: entityId },
-        data: updateData,
-      })
-      break
-    case 'place':
-      await prisma.place.update({
-        where: { id: entityId },
-        data: updateData,
-      })
-      break
-    case 'service':
-      await prisma.service.update({
-        where: { id: entityId },
-        data: updateData,
-      })
-      break
-  }
-}
