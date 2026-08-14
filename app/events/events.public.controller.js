@@ -13,6 +13,18 @@ const upcomingWhere = (now) => ({
   ],
 })
 
+// Зеркало upcomingWhere: событие прошло, если конец в прошлом,
+// а если конца нет — если в прошлом начало.
+// Ветка с null здесь безопасна: endAt объявлен в схеме с самого начала,
+// поэтому Prisma пишет его при создании явным null, а не пропускает поле
+const pastWhere = (now) => ({
+  isActive: true,
+  OR: [
+    { endAt: { lt: now } },
+    { AND: [{ endAt: null }, { startAt: { lt: now } }] },
+  ],
+})
+
 // @desc    Get upcoming active events (public, no auth)
 // @route   GET /api/events
 export const getEventsPublic = asyncHandler(async (req, res) => {
@@ -20,8 +32,12 @@ export const getEventsPublic = asyncHandler(async (req, res) => {
   const limit = parsePageLimit(req.query.limit, 12)
   const skip = (page - 1) * limit
   const category = (req.query.category || '').trim()
+  // Всё, кроме явного past, считается upcoming: так значение по умолчанию
+  // сохраняется для существующих вызовов, а мусор в параметре не отдаёт пустоту
+  const isPast = (req.query.when || '').trim() === 'past'
 
-  const where = upcomingWhere(new Date())
+  const now = new Date()
+  const where = isPast ? pastWhere(now) : upcomingWhere(now)
   if (category) where.category = category
 
   const [items, total] = await Promise.all([
@@ -29,7 +45,8 @@ export const getEventsPublic = asyncHandler(async (req, res) => {
       where,
       skip,
       take: limit,
-      orderBy: { startAt: 'asc' },
+      // Будущие — ближайшее первым, прошедшие — недавнее первым
+      orderBy: { startAt: isPast ? 'desc' : 'asc' },
     }),
     prisma.event.count({ where }),
   ])
