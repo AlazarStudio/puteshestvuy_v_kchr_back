@@ -26,3 +26,7 @@ export const warnIfListOutgrewLimit = (label, total, limit) => {
     console.warn(`Список «${label}»: записей ${total} при потолке страницы ${MAX_PAGE_LIMIT} — полный список больше не помещается`)
   }
 }
+
+/** Источник иконки объекта на карте: значок из библиотеки либо загруженный файл, всё прочее — пусто */
+export const normalizeMapIconType = (value) =>
+  value === "library" || value === "upload" ? value : null

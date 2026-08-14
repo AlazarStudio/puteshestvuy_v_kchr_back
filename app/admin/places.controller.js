@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
 import { buildRatingUpdate, findApprovedReviews, updateEntityRating } from "../utils/rating.js"
+import { normalizeMapIconType } from "../utils/validators.js"
 
 const generateSlug = (title) => {
   return title
@@ -165,6 +166,8 @@ export const createPlace = asyncHandler(async (req, res) => {
     objectTypes,
     accessibility,
     nearbyPlaceIds,
+    mapIcon,
+    mapIconType,
   } = req.body
 
   if (!title) {
@@ -205,6 +208,8 @@ export const createPlace = asyncHandler(async (req, res) => {
       objectTypes: Array.isArray(objectTypes) ? objectTypes : [],
       accessibility: Array.isArray(accessibility) ? accessibility : [],
       nearbyPlaceIds: nearby,
+      mapIcon: mapIcon || null,
+      mapIconType: normalizeMapIconType(mapIconType),
     },
   })
 
@@ -247,6 +252,8 @@ export const updatePlace = asyncHandler(async (req, res) => {
     objectTypes,
     accessibility,
     nearbyPlaceIds,
+    mapIcon,
+    mapIconType,
   } = req.body
 
   const data = {}
@@ -273,6 +280,8 @@ export const updatePlace = asyncHandler(async (req, res) => {
   if (objectTypes !== undefined) data.objectTypes = Array.isArray(objectTypes) ? objectTypes : []
   if (accessibility !== undefined) data.accessibility = Array.isArray(accessibility) ? accessibility : []
   if (nearbyPlaceIds !== undefined) data.nearbyPlaceIds = nearbyPlaceIds
+  if (mapIcon !== undefined) data.mapIcon = mapIcon || null
+  if (mapIconType !== undefined) data.mapIconType = normalizeMapIconType(mapIconType)
 
   const newNearby = nearbyPlaceIds !== undefined ? nearbyPlaceIds : existing.nearbyPlaceIds
   const existingNearby = Array.isArray(existing.nearbyPlaceIds) ? existing.nearbyPlaceIds : []

@@ -152,6 +152,8 @@ model Place {
   reviewsCount     Int      @default(0) @map("reviews_count")
   manualRating     Float?   @map("manual_rating")
   ratingSource     String   @default("reviews") @map("rating_source") // reviews | manual
+  mapIcon          String?  @map("map_icon")
+  mapIconType      String?  @map("map_icon_type") // library | upload
   uniqueViewsCount Int      @default(0) @map("unique_views_count")
   isActive         Boolean  @default(true) @map("is_active")
   image            String? // превью (обложка), одна картинка с кропом
@@ -253,6 +255,8 @@ model Service {
   reviewsCount     Int            @default(0) @map("reviews_count")
   manualRating     Float?         @map("manual_rating")
   ratingSource     String         @default("reviews") @map("rating_source") // reviews | manual
+  mapIcon          String?        @map("map_icon")
+  mapIconType      String?        @map("map_icon_type") // library | upload
   uniqueViewsCount Int            @default(0) @map("unique_views_count")
   isVerified       Boolean        @default(false) @map("is_verified")
   isActive         Boolean        @default(true) @map("is_active")

@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
 import { buildRatingUpdate, findApprovedReviews, updateEntityRating } from "../utils/rating.js"
+import { normalizeMapIconType } from "../utils/validators.js"
 
 const generateSlug = (title) => {
   return title
@@ -123,6 +124,8 @@ export const createService = asyncHandler(async (req, res) => {
     certificates,
     prices,
     data,
+    mapIcon,
+    mapIconType,
   } = req.body
 
   if (!title) {
@@ -159,6 +162,8 @@ export const createService = asyncHandler(async (req, res) => {
       certificates: certificates || [],
       prices: prices || [],
       data: data != null && typeof data === 'object' ? data : undefined,
+      mapIcon: mapIcon || null,
+      mapIconType: normalizeMapIconType(mapIconType),
     },
   })
 
@@ -202,6 +207,8 @@ export const updateService = asyncHandler(async (req, res) => {
   if (req.body.certificates !== undefined) updateData.certificates = req.body.certificates
   if (req.body.prices !== undefined) updateData.prices = req.body.prices
   if (req.body.data !== undefined) updateData.data = req.body.data != null && typeof req.body.data === 'object' ? req.body.data : null
+  if (req.body.mapIcon !== undefined) updateData.mapIcon = req.body.mapIcon || null
+  if (req.body.mapIconType !== undefined) updateData.mapIconType = normalizeMapIconType(req.body.mapIconType)
 
   const ratingUpdate = buildRatingUpdate(req.body, existing)
   if (ratingUpdate.error) {

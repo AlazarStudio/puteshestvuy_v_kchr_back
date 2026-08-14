@@ -25,6 +25,8 @@ export const getMapObjects = asyncHandler(async (req, res) => {
         images: true,
         location: true,
         objectTypes: true,
+        mapIcon: true,
+        mapIconType: true,
       },
     }),
     prisma.service.findMany({
@@ -40,6 +42,8 @@ export const getMapObjects = asyncHandler(async (req, res) => {
         images: true,
         address: true,
         category: true,
+        mapIcon: true,
+        mapIconType: true,
       },
     }),
   ])
