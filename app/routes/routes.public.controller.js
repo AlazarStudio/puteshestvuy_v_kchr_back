@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
+import { parsePageLimit } from "../utils/validators.js"
 
 
 function getExtraGroupsFromConfig(config) {
@@ -57,7 +58,7 @@ export const getRouteFiltersPublic = asyncHandler(async (req, res) => {
 // @route   GET /api/routes
 export const getRoutesPublic = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1
-  const limit = Math.min(parseInt(req.query.limit) || 12, 100)
+  const limit = parsePageLimit(req.query.limit, 12)
   const skip = (page - 1) * limit
   const search = (req.query.search || '').trim()
   const sortBy = (req.query.sortBy || 'createdAt').toLowerCase()

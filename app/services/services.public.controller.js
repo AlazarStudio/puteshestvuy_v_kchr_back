@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
+import { parsePageLimit, warnIfListOutgrewLimit } from "../utils/validators.js"
 
 // Совпадение метки локации (фильтр гостиниц/ресторанов) с текстом поля address.
 // Ключи должны совпадать с SERVICE_LOCATION_OPTIONS на фронте.
@@ -40,7 +41,7 @@ const LOCATION_MATCH_ALIASES = {
 // @route   GET /api/services
 export const getServicesPublic = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1
-  const limit = Math.min(parseInt(req.query.limit) || 100, 100)
+  const limit = parsePageLimit(req.query.limit, 100)
   const skip = (page - 1) * limit
   const search = (req.query.search || "").trim()
 
@@ -118,6 +119,8 @@ export const getServicesPublic = asyncHandler(async (req, res) => {
     }),
     prisma.service.count({ where }),
   ])
+
+  warnIfListOutgrewLimit("услуги", total, limit)
 
   res.json({
     items: items.map((item) => ({

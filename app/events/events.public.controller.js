@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
+import { parsePageLimit } from "../utils/validators.js"
 
 // Событие считается прошедшим по endAt, а если конца нет — по startAt.
 // Prisma не умеет сравнивать «одно поле или другое», поэтому условие
@@ -16,7 +17,7 @@ const upcomingWhere = (now) => ({
 // @route   GET /api/events
 export const getEventsPublic = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1
-  const limit = Math.min(parseInt(req.query.limit) || 12, 100)
+  const limit = parsePageLimit(req.query.limit, 12)
   const skip = (page - 1) * limit
   const category = (req.query.category || '').trim()
 

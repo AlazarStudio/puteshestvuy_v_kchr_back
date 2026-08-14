@@ -1,11 +1,12 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
+import { parsePageLimit } from "../utils/validators.js"
 
 // @desc    Get active news (public, no auth)
 // @route   GET /api/news
 export const getNewsPublic = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1
-  const limit = Math.min(parseInt(req.query.limit) || 12, 100)
+  const limit = parsePageLimit(req.query.limit, 12)
   const skip = (page - 1) * limit
   const search = (req.query.search || '').trim()
 

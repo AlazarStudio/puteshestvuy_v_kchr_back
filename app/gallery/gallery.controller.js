@@ -3,7 +3,7 @@ import path from 'path'
 import asyncHandler from 'express-async-handler'
 import { prisma } from '../prisma.js'
 import { removeUploadedFile, uploadsDir } from '../utils/imageUpload.js'
-import { isObjectId, trimCaption } from '../utils/validators.js'
+import { isObjectId, parsePageLimit, trimCaption } from '../utils/validators.js'
 
 /** Редакция текста согласия. При изменении формулировки в UploadPhotoModal — поднять версию. */
 export const CONSENT_VERSION = 'v1'
@@ -34,7 +34,7 @@ const MY_SELECT = {
 // @access  Public
 export const getPublicPhotos = asyncHandler(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1)
-  const limit = Math.min(parseInt(req.query.limit) || 24, 100)
+  const limit = parsePageLimit(req.query.limit, 24)
   const skip = (page - 1) * limit
   const where = { status: 'approved' }
 

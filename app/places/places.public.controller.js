@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler"
 import { prisma } from "../prisma.js"
+import { parsePageLimit, warnIfListOutgrewLimit } from "../utils/validators.js"
 
 
 function getExtraGroupsFromConfig(config) {
@@ -116,7 +117,7 @@ const buildPlacesWhere = async (query) => {
 // @route   GET /api/places
 export const getPlacesPublic = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1
-  const limit = Math.min(parseInt(req.query.limit) || 12, 100)
+  const limit = parsePageLimit(req.query.limit, 12)
   const skip = (page - 1) * limit
 
   const where = await buildPlacesWhere(req.query)
@@ -139,6 +140,8 @@ export const getPlacesPublic = asyncHandler(async (req, res) => {
     }),
     prisma.place.count({ where }),
   ])
+
+  warnIfListOutgrewLimit("места", total, limit)
 
   res.json({
     items: items.map((item) => ({
