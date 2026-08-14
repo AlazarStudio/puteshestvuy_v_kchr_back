@@ -119,7 +119,7 @@ export const uploadVideo = asyncHandler(async (req, res) => {
 // @route   GET /api/admin/media
 // @access  Admin
 export const getMedia = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1
+  const page = Math.max(1, parseInt(req.query.page) || 1)
   const limit = parseInt(req.query.limit) || 20
   const skip = (page - 1) * limit
 

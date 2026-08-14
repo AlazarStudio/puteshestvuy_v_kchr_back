@@ -5,7 +5,7 @@ import { prisma } from "../prisma.js"
 // @route   GET /api/admin/reviews
 // @access  Admin
 export const getReviews = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1
+  const page = Math.max(1, parseInt(req.query.page) || 1)
   const limit = parseInt(req.query.limit) || 10
   const skip = (page - 1) * limit
   const status = req.query.status

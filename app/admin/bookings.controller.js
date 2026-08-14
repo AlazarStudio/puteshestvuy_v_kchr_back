@@ -4,7 +4,7 @@ import { prisma } from "../prisma.js"
 // @desc    List booking requests (admin)
 // @route   GET /api/admin/bookings
 export const getBookingRequests = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1
+  const page = Math.max(1, parseInt(req.query.page) || 1)
   const limit = Math.min(parseInt(req.query.limit) || 50, 200)
   const skip = (page - 1) * limit
 
